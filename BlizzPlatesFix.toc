@@ -1,0 +1,67 @@
+## Interface: 120001
+## Title: BlizzPlatesFix
+## Notes: Modular NamePlates
+## Author: Archer#2848
+## Version: 1.0
+## SavedVariables: BlizzPlatesFixDB
+## IconTexture: Interface\AddOns\BlizzPlatesFix\Media\BPFIcon.tga
+## X-License: All Rights Reserved
+## X-Category: UnitFrames
+
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\lib.xml
+Libs\LibSharedMedia-3.0\lib.xml
+
+Localization\Init.lua
+Localization\enUS.lua
+Localization\ruRU.lua
+Localization\deDE.lua
+Localization\frFR.lua
+Localization\esES.lua
+Localization\esMX.lua
+Localization\itIT.lua
+Localization\ptBR.lua
+Localization\koKR.lua
+Localization\zhCN.lua
+Localization\zhTW.lua
+
+Core\Config.lua
+Core\Minimap.lua
+
+Core\ModuleManager.lua
+
+Core\Runner.lua
+Database.lua
+Core\Profiles.lua
+Core\Utils.lua
+Core\NamePlateCache.lua
+
+Modules\CVars.lua
+Modules\NameText.lua
+Modules\HpBar.lua
+Modules\Icon.lua
+Modules\FactionIcon.lua
+Modules\AurasData.lua
+Modules\Auras.lua
+Modules\AurasPreview.lua
+Modules\HpText.lua
+Modules\Border.lua
+Modules\TargetIndicator.lua
+Modules\Glow.lua
+Modules\CastBar.lua
+Modules\CastTimer.lua
+Modules\Level.lua
+Modules\Transparency.lua
+
+Core\Engine.lua
+Core\HooksDispatch.lua
+Core\Hooks.lua
+Core\Dispatch.lua
+Core\Events.lua
+Core\Commands.lua
+
+UI\Widgets.lua
+UI\Options.lua
+UI\Main.lua

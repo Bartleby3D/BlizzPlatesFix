@@ -1,0 +1,530 @@
+local AddonName, NS = ...
+NS.DB = NS.DB or {}
+
+-- Типы профилей (константы для удобства)
+NS.UNIT_TYPES = {
+    FRIENDLY_PLAYER = "FriendlyPlayer",
+    FRIENDLY_NPC    = "FriendlyNPC",
+    ENEMY_PLAYER    = "EnemyPlayer",
+    ENEMY_NPC       = "EnemyNPC",
+}
+
+local function CopyValue(v)
+    if type(v) ~= "table" then return v end
+    local t = {}
+    for k, v2 in pairs(v) do t[k] = CopyValue(v2) end
+    return t
+end
+
+-- 1. Глобальные настройки (Движок, CVars, общие правила)
+NS.DB.globalDefaults = {
+    -- Движок
+    globalFont = "Friz Quadrata TT",
+    globalScale = 1.0,
+    globalX = 0,
+    globalY = 0,
+
+    -- Minimap
+    showMinimapIcon = true,
+    -- CVars (Системные)
+    nameplateMaxDistance = 60,
+    nameplateSelectedScale = 1.2,
+    nameplateOccludedAlphaMult = 0.4,
+    nameplateMinScale = 1,
+
+    -- Прозрачность (логика)
+    transparencyEnabled = false,
+    transparencyMode = 1,
+    transparencyAlpha = 0.5,
+
+    -- Иконки (глобальные правила фильтрации)
+    classifEnabled = true,
+    classifHideAllies = true,
+    classifShowBossRareOnly = false,
+classifScale = 1.2,
+    classifX = -67,
+    classifY = 0,
+    classifMirror = true,
+    
+    
+    -- Иконка фракции (Alliance/Horde)
+    factionIconEnabled = false,
+    factionIconOnlyPlayers = true,
+    factionIconSize = 25,
+    factionIconX = 70,
+    factionIconY = -5,
+
+    -- Доп эффекты
+    hideAbsorbGlow = true,
+    hideHealPrediction = true,
+    hideCastShield = true,
+    -- Combat: immediate full refresh on entering combat (can cause CPU spike in mass pulls)
+    forceUpdateAllOnCombat = true,
+
+    -- UI: копирование профилей существ (состояние выпадающих списков)
+    copyProfileSource = NS.UNIT_TYPES.FRIENDLY_PLAYER,
+    copyProfileDest   = NS.UNIT_TYPES.ENEMY_PLAYER,
+    copySec_HPBAR = false,
+    copySec_NAME = false,
+    copySec_HPTEXT = false,
+    copySec_LEVEL = false,
+    copySec_TARGET = false,
+    copySec_CASTBAR = false,
+    copySec_BUFFS = false,
+    copySec_DEBUFFS = false,
+    copySec_CC = false,
+
+    -- UI: профили (состояние выпадающих списков)
+    profileCopySource = "Default",
+    profileDeleteTarget = "Default",
+
+}
+
+-- 2. Настройки для каждого типа существ (Визуал)
+-- Мы унифицировали имена переменных (например, просто healthColor, а не healthEnemyColor)
+NS.DB.unitDefaults = {
+    -- Активация вкладки
+    enabled = true, 
+
+    -- Геометрия
+    plateWidth = 140,
+    plateHeight = 8,
+
+    -- Полоса здоровья (master-toggle для подвкладки)
+    hpBarEnable = true,
+
+    -- Полоса здоровья
+    -- 1=Авто (игроки: класс, NPC: реакция), 2=Свой цвет, 3=Реакция (включая игроков)
+    healthColorMode = 1,
+    healthColor = {r=1, g=1, b=1}, -- Свой цвет (для вкладок без деления)
+
+    -- Свой цвет (разделение для NPC)
+    healthColorNeutral  = {r=1, g=1, b=1}, -- Нейтрал (атакуемый/неатакуемый)
+    healthColorHostile  = {r=1, g=1, b=1}, -- Враждебный (EnemyNPC)
+    healthColorFriendly = {r=1, g=1, b=1}, -- Союзник (FriendlyNPC)
+
+    -- Имя
+    nameEnable = true,
+    nameDisableTargetScale = true,
+    fontScale = 8,
+    fontOutline = "SHADOW",
+    textX = 0, textY = 5,
+    textAlign = "CENTER",
+    nameWordWrap = true,
+    nameWrapWidth = 135,
+    -- 1=Авто (игроки: класс, NPC: реакция), 2=Свой цвет, 3=Реакция (включая игроков)
+    nameColorMode = 1,
+    nameColor = {r=1, g=1, b=1}, -- Свой цвет (для вкладок без деления)
+
+    -- Свой цвет (разделение для NPC)
+    nameColorNeutral  = {r=1, g=1, b=1}, -- Нейтрал (атакуемый/неатакуемый)
+    nameColorHostile  = {r=1, g=1, b=1}, -- Враждебный (EnemyNPC)
+    nameColorFriendly = {r=1, g=1, b=1}, -- Союзник (FriendlyNPC)
+
+
+    -- Текст ХП
+    hpTextEnable = true,
+    hpDisplayMode = "PERCENT",
+    hpFontSize = 10,
+    hpColorMode = 2, -- 1=Градиент, 2=Свой цвет
+    hpColor = {r=1, g=1, b=1},
+    hpFontOutline = "SHADOW",
+    hpOffsetX = 0, hpOffsetY = 0.5,
+    hpTextAlign = "RIGHT",
+
+    -- Уровень
+    levelEnable = true,
+    levelFontSize = 10,
+    levelFontOutline = "SHADOW",
+    levelX = -1, levelY = 0,
+    levelAnchor = "RIGHT",
+    levelColorMode = 1, -- 1=Сложность, 2=Свой цвет
+    levelColor = {r=1, g=1, b=1},
+
+    -- Индикаторы (Target)
+    -- Мастер-переключатель всей подвкладки "Индикация цели" (рамка + стрелка + символы + mouseover glow)
+    targetIndicatorEnable = true,
+
+    targetBorderEnabled = true,
+    targetBorderColor = {r=0, g=1, b=0.95},
+    
+    targetIndicatorArrowEnable = false,
+    targetIndicatorArrowAnim = false,
+    targetIndicatorArrowSize = 30,
+    targetIndicatorArrowX = 0, targetIndicatorArrowY = 20,
+    targetIndicatorArrowColor = {r = 1, g = 1, b = 1},
+
+    targetIndicatorSymbolEnable = false,
+    targetIndicatorSymbolIndex = 1,
+    targetIndicatorSymbolOutline = "OUTLINE",
+    targetIndicatorSymbolSize = 15,
+    targetIndicatorSymbolX = 5, targetIndicatorSymbolY = 0,
+    targetIndicatorSymbolColor = {r = 1, g = 1, b = 1},
+    
+    mouseoverGlowEnable = true,
+    mouseoverGlowAlpha = 0.5,
+    mouseoverGlowColor = {r = 1, g = 1, b = 1},
+
+    -- Кастбар
+    cbEnabled = true,
+    cbBarEnabled = true, -- отдельная галочка: только полоса применения
+    cbWidth = 142, cbHeight = 8,
+    cbX = 0, cbY = -1,
+    cbIconEnabled = true, cbIconSize = 20, cbIconX = -3, cbIconY = 7,
+    cbIconBorderEnable = true, cbIconBorderThickness = 2, cbIconBorderColor = {r=0, g=0, b=0, a=1},
+    cbTextEnabled = true, cbTextJustify = "LEFT", cbTextOutline = "SHADOW", cbFontSize = 9,
+    cbTextX = -3, cbTextY = 0.5, cbTextMaxLength = 0, cbTextColor = {r=1, g=1, b=1},
+    cbTimerEnabled = true, cbTimerFormat = "%.0f", cbTimerOutline = "SHADOW", 
+    cbTimerColor = {r=1, g=1, b=1}, cbTimerFontSize = 15, cbTimerX = 0, cbTimerY = 0,
+    cbTargetEnabled = true, cbTargetJustify = "LEFT",
+    cbTargetOutline = "SHADOW", cbTargetFontSize = 9, cbTargetX = -18, cbTargetY = -10,
+    cbTargetMaxLength = 20, cbTargetMode = "CLASS", cbTargetColor = {r=1, g=1, b=1},
+
+    -- Ауры
+    aurasEnable = true,
+    -- Превью аур (хранится в профиле типа существа, чтобы не захламлять все неймплейты)
+    buffsPreview = false,
+    debuffsPreview = false,
+    ccPreview = false,
+    buffsEnable = true,
+    buffsSize = 20, buffsX = -5, buffsY = -15, buffsAlign = "RIGHT",
+    buffsSpacing = 5, buffsIconHeight = 20, buffsTimerEdge = false, buffsTimerEnable = true, buffsStacksEnable = true,
+    -- Враги: показывать только снимаемые/воруемые баффы (Purge/Spellsteal)
+    -- Враги: подсветка баффов, которые можно снять/украсть (Purge/Spellsteal и аналоги)
+    buffsPurgeGlow = false,
+    -- Dropdown aura filters (single choice)
+    -- Friendly IMPORTANT uses Blizzard RAID filters; Enemy IMPORTANT uses Blizzard nameplate-only list.
+    buffsFriendlyFilterMode = "ALL", -- ALL|MINE|MINE_IMPORTANT|IMPORTANT
+    debuffsFriendlyFilterMode = "ALL", -- ALL|IMPORTANT|DISPEL|IMPORTANT_AND_DISPEL|IMPORTANT_OR_DISPEL
+    buffsEnemyFilterMode = "ALL", -- ALL|IMPORTANT|PURGE|IMPORTANT_AND_PURGE|IMPORTANT_OR_PURGE
+    debuffsEnemyFilterMode = "ALL", -- ALL|IMPORTANT|MINE|MINE_AND_IMPORTANT
+
+
+    
+    buffsBorderEnable = true,
+    buffsBorderThickness = 2,
+    buffsBorderColor = {r=0, g=0, b=0, a=1},
+    debuffsEnable = true,
+    debuffsSize = 20, debuffsX = 0, debuffsY = 20, debuffsAlign = "CENTER",
+    debuffsSpacing = 5, debuffsIconHeight = 20, debuffsTimerEdge = false, debuffsTimerEnable = true, debuffsStacksEnable = true,
+    -- Враги: показывать только мои дебаффы
+    -- Враги: показывать только "важные" среди моих дебаффов (как у Blizzard nameplates)
+    -- Враги: показывать только снимаемые/воруемые баффы (Purge/Spellsteal)
+    debuffsBorderEnable = true,
+    debuffsBorderThickness = 2,
+    debuffsBorderColor = {r=0, g=0, b=0, a=1},
+    debuffsDispelGlow = false,
+    ccEnable = true,
+    ccSize = 25, ccX = 5, ccY = -15, ccAlign = "LEFT",
+    ccSpacing = 5, ccIconHeight = 25, ccTimerEdge = false, ccTimerEnable = true, ccStacksEnable = true,
+    ccBorderEnable = true,
+    ccBorderThickness = 2,
+    ccBorderColor = {r=0, g=0, b=0, a=1},
+    ccOnlyMine = false,
+    buffsPandemic = true,
+    debuffsPandemic = true,
+    ccPandemic = true,
+    -- Ауры: таймер/стаки (отдельно для BUFF/DEBUFF/CC)
+    buffsTimeFontSize = 15, buffsTimeX = 0, buffsTimeY = 0, buffsTimeColor = {r=1, g=1, b=1},
+    buffsStackFontSize = 10, buffsStackX = 2, buffsStackY = -2, buffsStackColor = {r=1, g=1, b=1},
+
+    debuffsTimeFontSize = 15, debuffsTimeX = 0, debuffsTimeY = 0, debuffsTimeColor = {r=1, g=1, b=1},
+    debuffsStackFontSize = 10, debuffsStackX = 2, debuffsStackY = -2, debuffsStackColor = {r=1, g=1, b=1},
+
+    ccTimeFontSize = 15, ccTimeX = 0, ccTimeY = 0, ccTimeColor = {r=1, g=1, b=1},
+    ccStackFontSize = 10, ccStackX = 2, ccStackY = -2, ccStackColor = {r=1, g=1, b=1},
+}
+
+function NS.DB.Init()
+    BlizzPlatesFixDB = BlizzPlatesFixDB or {}
+
+    -- Profile containers (character-bound)
+    BlizzPlatesFixDB.profileKeys = BlizzPlatesFixDB.profileKeys or {}
+    BlizzPlatesFixDB.profiles = BlizzPlatesFixDB.profiles or {}
+
+    -- Ensure Default exists
+    BlizzPlatesFixDB.profiles["Default"] = BlizzPlatesFixDB.profiles["Default"] or { Global = {}, Units = {} }
+
+    -- Ensure current character is bound to an existing profile
+    local ck = NS.Config and NS.Config.GetCharKey and NS.Config.GetCharKey()
+    if ck then
+        local p = BlizzPlatesFixDB.profileKeys[ck] or "Default"
+        if not BlizzPlatesFixDB.profiles[p] then p = "Default" end
+        BlizzPlatesFixDB.profileKeys[ck] = p
+    end
+
+    -- Fill defaults for every profile
+    for _, prof in pairs(BlizzPlatesFixDB.profiles) do
+        prof.Global = prof.Global or {}
+        for k, v in pairs(NS.DB.globalDefaults) do
+            if prof.Global[k] == nil then
+                prof.Global[k] = CopyValue(v)
+            end
+        end
+
+        prof.Units = prof.Units or {}
+        for _, unitType in pairs(NS.UNIT_TYPES) do
+            prof.Units[unitType] = prof.Units[unitType] or {}
+            for k, v in pairs(NS.DB.unitDefaults) do
+                if prof.Units[unitType][k] == nil then
+                    prof.Units[unitType][k] = CopyValue(v)
+                end
+            end
+        end
+    end
+
+    -- Bind legacy aliases to the active profile.
+    -- Some helpers (e.g. CopySection/CopySections) still read BlizzPlatesFixDB.Global/Units.
+    do
+        local activeName = "Default"
+        if NS.Config and NS.Config.GetActiveProfileName then
+            activeName = NS.Config.GetActiveProfileName() or "Default"
+        else
+            local ck2 = NS.Config and NS.Config.GetCharKey and NS.Config.GetCharKey()
+            if ck2 and type(BlizzPlatesFixDB.profileKeys) == "table" then
+                activeName = BlizzPlatesFixDB.profileKeys[ck2] or "Default"
+            end
+        end
+
+        local active = (type(BlizzPlatesFixDB.profiles) == "table") and BlizzPlatesFixDB.profiles[activeName] or nil
+        if not active then active = BlizzPlatesFixDB.profiles["Default"] end
+        if active then
+            BlizzPlatesFixDB.Global = active.Global
+            BlizzPlatesFixDB.Units  = active.Units
+        end
+    end
+end
+
+
+-- =====================================================================
+-- Копирование профилей существ (по разделам)
+-- =====================================================================
+
+-- Правила копирования по разделам.
+-- Примечание: для Полосы здоровья и Имени намеренно НЕ копируем настройки цвета
+-- (по запросу пользователя: "Цвет полосы здоровья" и "Цвет имени").
+NS.DB.CopySectionRules = {
+    HPBAR = {
+        mode = "keys",
+        keys = { "hpBarEnable", "plateWidth", "plateHeight" },
+    },
+    NAME = {
+        mode = "keys",
+        keys = {
+            "nameEnable",
+            "nameDisableTargetScale",
+            "fontScale", "fontOutline",
+            "textX", "textY", "textAlign",
+            "nameWordWrap", "nameWrapWidth",
+        },
+    },
+    HPTEXT = {
+        mode = "keys",
+        keys = {
+            "hpTextEnable",
+            "hpDisplayMode",
+            "hpFontSize",
+            "hpColorMode", "hpColor",
+            "hpFontOutline",
+            "hpOffsetX", "hpOffsetY",
+            "hpTextAlign",
+        },
+    },
+    LEVEL = {
+        mode = "keys",
+        keys = {
+            "levelEnable",
+            "levelFontSize", "levelFontOutline",
+            "levelX", "levelY", "levelAnchor",
+            "levelColorMode", "levelColor",
+        },
+    },
+    TARGET = {
+        mode = "keys",
+        keys = {
+            "targetIndicatorEnable",
+            "targetBorderEnabled", "targetBorderColor",
+            "targetIndicatorArrowEnable", "targetIndicatorArrowAnim", "targetIndicatorArrowSize", "targetIndicatorArrowX", "targetIndicatorArrowY", "targetIndicatorArrowColor",
+            "targetIndicatorSymbolEnable", "targetIndicatorSymbolIndex", "targetIndicatorSymbolOutline", "targetIndicatorSymbolSize", "targetIndicatorSymbolX", "targetIndicatorSymbolY", "targetIndicatorSymbolColor",
+            "mouseoverGlowEnable", "mouseoverGlowAlpha", "mouseoverGlowColor",
+        },
+    },
+    CASTBAR = {
+        mode = "prefix",
+        prefix = "cb",
+    },
+    BUFFS = {
+        mode = "prefix",
+        prefix = "buffs",
+    },
+    DEBUFFS = {
+        mode = "prefix",
+        prefix = "debuffs",
+    },
+    CC = {
+        mode = "prefix",
+        prefix = "cc",
+    },
+}
+
+-- Копирует выбранный раздел из одного типа существа в другой.
+-- sectionKey: "HPBAR"|"NAME"|"HPTEXT"|"LEVEL"|"TARGET"|"CASTBAR"|"BUFFS"|"DEBUFFS"|"CC"
+function NS.DB.CopySection(fromType, toType, sectionKey)
+    if not BlizzPlatesFixDB or not BlizzPlatesFixDB.Units then return false, "db_not_ready" end
+    if not fromType or not toType or fromType == toType then return false, "bad_types" end
+    local source = BlizzPlatesFixDB.Units[fromType]
+    local dest = BlizzPlatesFixDB.Units[toType]
+    if not source or not dest then return false, "missing_profile" end
+
+    local rule = NS.DB.CopySectionRules and NS.DB.CopySectionRules[sectionKey]
+    if not rule then return false, "bad_section" end
+
+    -- Динамические исключения для аур: чтобы при копировании между Friendly/Enemy
+    -- не перетирать настройки, которые актуальны только для одной стороны.
+    local dynIgnore = nil
+    if sectionKey == "BUFFS" then
+        dynIgnore = { buffsPreview = true } -- настройки превью не копируем
+        if (toType == NS.UNIT_TYPES.ENEMY_PLAYER) or (toType == NS.UNIT_TYPES.ENEMY_NPC) then
+            -- копируем BUFFS в ENEMY: не трогаем friendly-mode
+            dynIgnore.buffsFriendlyFilterMode = true
+        else
+            -- копируем BUFFS в FRIENDLY: не трогаем enemy-mode и enemy-only опции
+            dynIgnore.buffsEnemyFilterMode = true
+            dynIgnore.buffsPurgeGlow = true
+        end
+    elseif sectionKey == "DEBUFFS" then
+        dynIgnore = { debuffsPreview = true } -- настройки превью не копируем
+        if (toType == NS.UNIT_TYPES.ENEMY_PLAYER) or (toType == NS.UNIT_TYPES.ENEMY_NPC) then
+            -- копируем DEBUFFS в ENEMY: не трогаем friendly-mode и friendly-only опции
+            dynIgnore.debuffsFriendlyFilterMode = true
+            dynIgnore.debuffsDispelGlow = true
+        else
+            -- копируем DEBUFFS в FRIENDLY: не трогаем enemy-mode
+            dynIgnore.debuffsEnemyFilterMode = true
+        end
+    elseif sectionKey == "CC" then
+        dynIgnore = { ccPreview = true } -- настройки превью не копируем
+    end
+
+    if rule.mode == "keys" and rule.keys then
+        for _, k in ipairs(rule.keys) do
+            if source[k] ~= nil then
+                dest[k] = CopyValue(source[k])
+            end
+        end
+    elseif rule.mode == "prefix" and rule.prefix then
+        local p = rule.prefix
+        for k, v in pairs(source) do
+            if type(k) == "string" and k:sub(1, #p) == p then
+                if not (dynIgnore and dynIgnore[k]) then
+                    dest[k] = CopyValue(v)
+                end
+            end
+        end
+    else
+        return false, "bad_rule"
+    end
+
+    -- Принудительное обновление неймплейтов после копирования
+    if NS.RequestUpdateAll then
+        NS.RequestUpdateAll("copy_section:" .. tostring(sectionKey), true)
+    elseif NS.ForceUpdateAll then
+        NS.ForceUpdateAll()
+    end
+
+    return true
+end
+
+-- Копирует несколько разделов за один раз и вызывает обновление только один раз.
+-- sectionKeys: массив из "HPBAR"|"NAME"|...
+function NS.DB.CopySections(fromType, toType, sectionKeys)
+    if type(sectionKeys) ~= "table" then
+        return NS.DB.CopySection(fromType, toType, tostring(sectionKeys))
+    end
+    if not BlizzPlatesFixDB or not BlizzPlatesFixDB.Units then return false, "db_not_ready" end
+    if not fromType or not toType or fromType == toType then return false, "bad_types" end
+    local source = BlizzPlatesFixDB.Units[fromType]
+    local dest = BlizzPlatesFixDB.Units[toType]
+    if not source or not dest then return false, "missing_profile" end
+
+    local any = false
+    for _, sectionKey in ipairs(sectionKeys) do
+        local rule = NS.DB.CopySectionRules and NS.DB.CopySectionRules[sectionKey]
+        if rule then
+            local dynIgnore = nil
+            if sectionKey == "BUFFS" then
+                dynIgnore = { buffsPreview = true } -- настройки превью не копируем
+                if (toType == NS.UNIT_TYPES.ENEMY_PLAYER) or (toType == NS.UNIT_TYPES.ENEMY_NPC) then
+                    dynIgnore.buffsFriendlyFilterMode = true
+                else
+                    dynIgnore.buffsEnemyFilterMode = true
+                    dynIgnore.buffsPurgeGlow = true
+                end
+            elseif sectionKey == "DEBUFFS" then
+                dynIgnore = { debuffsPreview = true } -- настройки превью не копируем
+                if (toType == NS.UNIT_TYPES.ENEMY_PLAYER) or (toType == NS.UNIT_TYPES.ENEMY_NPC) then
+                    dynIgnore.debuffsFriendlyFilterMode = true
+                    dynIgnore.debuffsDispelGlow = true
+                else
+                    dynIgnore.debuffsEnemyFilterMode = true
+                end
+            elseif sectionKey == "CC" then
+                dynIgnore = { ccPreview = true } -- настройки превью не копируем
+            end
+
+            if rule.mode == "keys" and rule.keys then
+                for _, k in ipairs(rule.keys) do
+                    if source[k] ~= nil then
+                        dest[k] = CopyValue(source[k])
+                        any = true
+                    end
+                end
+            elseif rule.mode == "prefix" and rule.prefix then
+                local pfx = rule.prefix
+                for k, v in pairs(source) do
+                    if type(k) == "string" and k:sub(1, #pfx) == pfx then
+                        if not (dynIgnore and dynIgnore[k]) then
+                            dest[k] = CopyValue(v)
+                            any = true
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if any then
+        if NS.RequestUpdateAll then
+            NS.RequestUpdateAll("copy_sections", true)
+        elseif NS.ForceUpdateAll then
+            NS.ForceUpdateAll()
+        end
+    end
+
+    return any
+end
+
+-- Функция копирования профиля (из одной вкладки в другую)
+function NS.DB.CopyProfile(fromType, toType)
+    if not BlizzPlatesFixDB.Units[fromType] or not BlizzPlatesFixDB.Units[toType] then return end
+    
+    local source = BlizzPlatesFixDB.Units[fromType]
+    local dest = BlizzPlatesFixDB.Units[toType]
+    
+    -- Ключи, которые НЕ копируем (имя, цвет полос - как ты просил)
+    local ignore = {
+        enabled = true,
+        healthColorMode = true, healthColor = true,
+        healthColorNeutral = true, healthColorHostile = true, healthColorFriendly = true,
+        nameColorMode = true, nameColor = true,
+        nameColorNeutral = true, nameColorHostile = true, nameColorFriendly = true,
+    }
+
+    for k, v in pairs(source) do
+        if not ignore[k] then
+            dest[k] = CopyValue(v)
+        end
+    end
+    
+    if NS.ForceUpdateAll then NS.ForceUpdateAll() end
+end
