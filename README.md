@@ -1,52 +1,31 @@
-## \# BlizzPlatesFix
+BlizzPlatesFix — is a lightweight modular addon for deep customization of standard World of Warcraft nameplates. The primary goal of the project is to provide flexible functionality while maintaining performance and the standard interface style.
 
-## 
+⚠️ Note: The addon is under active development and testing. If you encounter a bug, please report it on the project page.
 
-## \*\*BlizzPlatesFix\*\* — это легковесный модульный аддон для глубокой настройки стандартных неймплейтов World of Warcraft. Основная цель проекта — предоставить гибкий функционал, сохраняя при этом производительность и стандартный стиль интерфейса.
+✨ Key Features
 
-## 
+-Customization: Health bar and name settings: resizing, element offsets, color selection, etc.
+-Aura Engine: Buff and debuff display settings.
+-Cast Bars: Cast bar settings with ability icon, timer, and cast target display.
+-Target Indicators: Visual target markers (customizable arrows, symbols, and frame highlighting).
 
-## > \*\*⚠️ Примечание:\*\* Аддон находится в стадии активной разработки и тестирования. Если вы столкнулись с ошибкой, пожалуйста, сообщите о ней на странице проекта.
+⌨️ Control Commands
 
-## 
+/bpf — open the main settings menu.
 
-## \## ✨ Основные возможности
+📜 License and Copyright
 
-## \* \*\*Customization:\*\* Настройка полос здоровья и имен: изменение размеров, смещение элементов, выбор цветов и тд.
+This project is distributed under the All Rights Reserved license.
 
-## \* \*\*Aura Engine:\*\* Настройки отображения баффов и дебаффов.
+You may use this addon for personal purposes. Any full or partial unauthorized copying of the code, its modification for public use, or republication on third-party resources is prohibited.
 
-## \* \*\*Cast Bars:\*\* Настройки полосы заклинаний с отображением иконки способности, таймера и цели каста.
+❤️ Credits and Resources
 
-## \* \*\*Target Indicators:\*\* Визуальные маркеры цели (настраиваемые стрелки, символы и подсветка рамки).
+The project uses the following third-party developments:
 
-## 
+Libraries: LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0, LibSharedMedia-3.0.
+Fonts: Roboto Condensed (Licensed under SIL Open Font License 1.1).
 
-## \## ⌨️ Команды управления
+---
 
-## \* `/bpf` — открыть главное меню настроек.
-
-## 
-
-## \## 📜 Лицензия и авторское право
-
-## Данный проект распространяется под лицензией \*\*All Rights Reserved\*\*. 
-
-## Вы можете использовать этот аддон в личных целях. Запрещено любое полное или частичное несанкционированное копирование кода, его модификация для публичного использования или перепубликация на сторонних ресурсах.
-
-## 
-
-## \## ❤️ Благодарности и ресурсы
-
-## Проект использует следующие сторонние разработки:
-
-## \* \*\*Библиотеки:\*\* LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0, LibSharedMedia-3.0.
-
-## \* \*\*Шрифты:\*\* Roboto Condensed (Licensed under SIL Open Font License 1.1).
-
-## 
-
-## ---
-
-## \*Разработано энтузиастом с акцентом на чистый код и стабильность.\*
-
+Developed by an enthusiast with an emphasis on clean code and stability.
