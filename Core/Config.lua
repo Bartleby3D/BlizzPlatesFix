@@ -1,9 +1,4 @@
 local _, NS = ...
-
--- =============================================================
--- CONFIG: единственная точка доступа к SavedVariables (BlizzPlatesFixDB)
--- =============================================================
-
 NS.Config = NS.Config or {}
 
 -- =============================================================
@@ -171,15 +166,6 @@ function NS.Config.GetTable(context)
     return (prof.Units and prof.Units[context]) or nil
 end
 
--- Утилиты более высокого уровня (на будущее):
-function NS.Config.GetGlobalTable()
-    return NS.Config.GetTable("Global")
-end
-
-function NS.Config.GetUnitTypeTable(unitType)
-    if not unitType then return nil end
-    return NS.Config.GetTable(unitType)
-end
 
 -- Получить значение
 function NS.Config.Get(key, context)
