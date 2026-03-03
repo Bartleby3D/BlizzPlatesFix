@@ -1,5 +1,4 @@
-local AddonName, NS = ...
-
+local _, NS = ...
 -- =============================================================
 -- ENGINE: единый цикл обновлений (очередь + периодические задачи)
 -- Цель: централизовать расписание и не плодить UpdateFrame'ы в разных файлах.
@@ -40,8 +39,14 @@ NS.REASON_ALL    = NS.REASON_ALL    or -1
 local LastReason = {} -- [unitToken] = string
 
 -- Очередь обновлений (throttle)
-local Pending = {}
-local pendingCount = 0
+-- PendingMask хранит агрегированную битмаску причин по юниту.
+-- Queue обеспечивает справедливый FIFO-обход (без зависимости от pairs()).
+local PendingMask = {}      -- [unitToken] = reasonMask
+local Queue = {}            -- array of unitTokens
+local QueueHead = 1
+local QueueTail = 0
+local InQueue = {}          -- [unitToken] = true
+local queuedCount = 0
 
 local QueueThrottle = {} -- [unitToken] = lastTimeQueued
 
@@ -59,6 +64,37 @@ function NS.Engine.SafeCall(func, ...)
     end
 end
 
+
+-- =============================================================
+-- Прямое обновление прозрачности по дистанции (без очереди/Runner/ModuleManager)
+-- =============================================================
+function NS.UpdateTransparencyRange()
+    if not (NS.Config and NS.Config.GetTable) then return end
+    if not (NS.Modules and NS.Modules.Transparency and NS.Modules.Transparency.Update) then return end
+
+    local gdb = NS.Config.GetTable("Global")
+    if not gdb then return end
+
+    if gdb.transparencyEnabled ~= true then return end
+    if gdb.transparencyMode ~= 2 then return end
+    local a = gdb.transparencyAlpha
+    if a == nil then a = 1 end
+    if a >= 0.999 then return end
+
+    local mod = NS.Modules.Transparency
+
+    for unit, frame in pairs(NS.ActiveNamePlates) do
+        if frame and not frame:IsForbidden() then
+            -- Не трогаем widgets-only (интерактивные объекты), чтобы не сделать их полупрозрачными.
+            if _G.UnitNameplateShowsWidgetsOnly and _G.UnitNameplateShowsWidgetsOnly(unit) then
+                if mod.Reset then mod.Reset(frame) end
+            else
+                mod.Update(frame, unit, nil, gdb)
+            end
+        end
+    end
+end
+
 -- Поставить юнит в очередь на обновление
 function NS.Engine.QueueUnitUpdate(unit, reasonMask)
     if not IsNameplateUnit(unit) then return end
@@ -68,22 +104,25 @@ function NS.Engine.QueueUnitUpdate(unit, reasonMask)
     local now = GetTime()
     local last = QueueThrottle[unit]
     if last and (now - last) < 0.05 then
-        -- Если уже в очереди — только объединяем причины.
-        if Pending[unit] then
-            Pending[unit] = bor(Pending[unit], reasonMask)
-        else
-            Pending[unit] = reasonMask
-            pendingCount = pendingCount + 1
+        -- Уже недавно ставили в очередь: только объединяем причины.
+        PendingMask[unit] = PendingMask[unit] and bor(PendingMask[unit], reasonMask) or reasonMask
+        if not InQueue[unit] then
+            QueueTail = QueueTail + 1
+            Queue[QueueTail] = unit
+            InQueue[unit] = true
+            queuedCount = queuedCount + 1
         end
         return
     end
     QueueThrottle[unit] = now
 
-    if Pending[unit] then
-        Pending[unit] = bor(Pending[unit], reasonMask)
-    else
-        Pending[unit] = reasonMask
-        pendingCount = pendingCount + 1
+    PendingMask[unit] = PendingMask[unit] and bor(PendingMask[unit], reasonMask) or reasonMask
+
+    if not InQueue[unit] then
+        QueueTail = QueueTail + 1
+        Queue[QueueTail] = unit
+        InQueue[unit] = true
+        queuedCount = queuedCount + 1
     end
 end
 
@@ -119,9 +158,8 @@ function NS.Engine.RequestUpdateAll(reason, immediate, reasonMask)
     end
 end
 
-function NS.Engine.GetLastUpdateReason(unit)
-    return LastReason[unit]
-end
+-- Debug accessor intentionally not exported in release builds.
+-- LastReason is kept local for optional NS.DEBUG printing.
 
 -- Поставить все активные неймплейты в очередь
 function NS.Engine.QueueAllActive(reasonMask)
@@ -135,31 +173,53 @@ end
 function NS.Engine.ClearUnitFromQueues(unit)
     if not unit then return end
 
-    if Pending[unit] ~= nil then
-        Pending[unit] = nil
-        pendingCount = pendingCount - 1
-    end
-
+    PendingMask[unit] = nil
+    InQueue[unit] = nil
     QueueThrottle[unit] = nil
 end
 
 -- Разгрести очередь (частично). Возвращает число обработанных.
 function NS.Engine.FlushPending(maxPerTick)
-    if pendingCount <= 0 then return 0 end
+    if queuedCount <= 0 then return 0 end
 
     local processed = 0
     local limit = maxPerTick or 25
 
-    for unitToken, mask in pairs(Pending) do
-        Pending[unitToken] = nil
-        pendingCount = pendingCount - 1
+    while processed < limit and queuedCount > 0 do
+        local unitToken = Queue[QueueHead]
+        Queue[QueueHead] = nil
+        QueueHead = QueueHead + 1
+        queuedCount = queuedCount - 1
 
-        NS.Engine.SafeCall(NS.UpdateAllModules, unitToken, mask or NS.REASON_ALL)
+        if unitToken then
+            InQueue[unitToken] = nil
+            local mask = PendingMask[unitToken]
+            PendingMask[unitToken] = nil
+
+            if mask then
+                NS.Engine.SafeCall(NS.UpdateAllModules, unitToken, mask or NS.REASON_ALL)
+            end
+        end
 
         processed = processed + 1
-        if processed >= limit then
-            break
+    end
+
+    -- Компактация очереди, чтобы QueueHead не рос бесконечно.
+    if QueueHead > 200 and QueueHead > (QueueTail / 2) then
+        local newQ = {}
+        local n = 0
+        for i = QueueHead, QueueTail do
+            local u = Queue[i]
+            if u then
+                n = n + 1
+                newQ[n] = u
+            end
         end
+        Queue = newQ
+        QueueHead = 1
+        QueueTail = n
+        queuedCount = n
+        -- InQueue остаётся корректным, т.к. мы не меняем факты присутствия юнитов в очереди.
     end
 
     return processed
@@ -231,12 +291,20 @@ end
 
 
 local function Fast_TransparencyRange()
-    -- Обновляем прозрачность по дистанции периодически, без дергания всех модулей.
-    -- Задача включается только если transparencyEnabled=true.
-    if not (NS.Config and NS.Config.Get) then return end
-    if NS.Config.Get("transparencyEnabled", "Global") ~= true then return end
-    NS.Engine.QueueAllActive(NS.REASON_RANGE)
+    -- Обновляем прозрачность по дистанции периодически.
+    -- Важно: запускаем только когда включено и выбран режим "By distance".
+    if not (NS.Config and NS.Config.GetTable) then return end
+    local gdb = NS.Config.GetTable("Global")
+    if not gdb then return end
+    if gdb.transparencyEnabled ~= true then return end
+    if gdb.transparencyMode ~= 2 then return end
+    local a = gdb.transparencyAlpha
+    if a == nil then a = 1 end
+    if a >= 0.999 then return end
+
+    NS.Engine.SafeCall(NS.UpdateTransparencyRange)
 end
+
 
 
 -- Регистрируем задачи по умолчанию
