@@ -1,5 +1,4 @@
-local AddonName, NS = ...
-
+local _, NS = ...
 -- Этот файл только устанавливает хуки. Логика реакции вынесена в Core/HooksDispatch.lua
 
 local function HookHandler(frame)
