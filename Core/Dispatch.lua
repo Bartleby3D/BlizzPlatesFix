@@ -92,6 +92,10 @@ function Dispatch.HandleEvent(event, arg1, arg2, ...)
 
     -- Nameplates
     if event == "NAME_PLATE_UNIT_ADDED" then
+        -- Unit tokens can be reused; ensure no stale per-unit caches survive.
+        if NS.ClearUnitConfigCache then
+            NS.ClearUnitConfigCache(arg1)
+        end
         NS.AddActivePlate(arg1)
         -- быстрый апдейт для устранения “переходных” состояний на реюзе
         RequestUnitUpdate(arg1, "plate_added", true, NS.REASON_ALL)
