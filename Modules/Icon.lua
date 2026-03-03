@@ -178,7 +178,11 @@ NS.Modules.Icon = {
         UpdateIcon(frame, unit, db, gdb)
     end,
     Reset = function(frame)
-        local st = GetState(frame)
+        local st = State[frame]
+        if not st then
+            if frame.BPF_ClassIcon then frame.BPF_ClassIcon:Hide() end
+            return
+        end
         if frame.BPF_ClassIcon then
             frame.BPF_ClassIcon:Hide()
         end

@@ -38,13 +38,8 @@ end
 -- Some aura fields can be "secret" (including booleans). Any boolean-test
 -- (if/and/or/not) on a secret value can error in tainted execution.
 -- Use canaccessvalue() to safely read them.
-local _canaccessvalue = _G.canaccessvalue
-local function SafeBool(v)
-    if _canaccessvalue and v ~= nil and _canaccessvalue(v) then
-        return (v and true or false)
-    end
-    return false
-end
+local SafeBool = NS.SafeBool
+local SafeValue = NS.SafeValue
 
 -- ==========================================================================
 -- IMPORTANT AURAS (Blizzard nameplate filters)

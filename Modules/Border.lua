@@ -87,7 +87,8 @@ NS.Modules.Border = {
             frame.healthBar.selectedBorder:Hide()
             frame.healthBar.selectedBorder:SetScale(1.0)
         end
-        local st = GetState(frame)
+        local st = State[frame]
+        if not st then return end
         st.lastVisible = false
         st.lastScale = nil
         st.lastColorR = nil

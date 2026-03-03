@@ -60,7 +60,8 @@ end
 
 function NS.AurasData.Reset(frame)
     if not frame then return end
-    local st = GetState(frame)
+    local st = State[frame]
+    if not st then return end
     ResetState(st)
 end
 

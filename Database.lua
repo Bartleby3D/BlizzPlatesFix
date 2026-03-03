@@ -42,12 +42,11 @@ NS.DB.globalDefaults = {
     classifEnabled = true,
     classifHideAllies = true,
     classifShowBossRareOnly = false,
-classifScale = 1.2,
+    classifScale = 1.2,
     classifX = -67,
     classifY = 0,
     classifMirror = true,
-    
-    
+
     -- Иконка фракции (Alliance/Horde)
     factionIconEnabled = false,
     factionIconOnlyPlayers = true,
@@ -121,7 +120,6 @@ NS.DB.unitDefaults = {
     nameColorNeutral  = {r=1, g=1, b=1}, -- Нейтрал (атакуемый/неатакуемый)
     nameColorHostile  = {r=1, g=1, b=1}, -- Враждебный (EnemyNPC)
     nameColorFriendly = {r=1, g=1, b=1}, -- Союзник (FriendlyNPC)
-
 
     -- Текст ХП
     hpTextEnable = true,
@@ -199,7 +197,6 @@ NS.DB.unitDefaults = {
     debuffsFriendlyFilterMode = "IMPORTANT", -- ALL|IMPORTANT|DISPEL|IMPORTANT_AND_DISPEL|IMPORTANT_OR_DISPEL
     buffsEnemyFilterMode = "IMPORTANT", -- ALL|IMPORTANT|PURGE|IMPORTANT_AND_PURGE|IMPORTANT_OR_PURGE
     debuffsEnemyFilterMode = "MINE", -- ALL|IMPORTANT|MINE|MINE_AND_IMPORTANT
-
 
     
     buffsBorderEnable = true,
@@ -295,7 +292,6 @@ function NS.DB.Init()
         end
     end
 end
-
 
 -- =====================================================================
 -- Копирование профилей существ (по разделам)

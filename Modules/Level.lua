@@ -161,7 +161,11 @@ NS.Modules.Level = {
         UpdateLevel(frame, unit, db, gdb)
     end,
     Reset = function(frame)
-        local st = GetState(frame)
+        local st = State[frame]
+        if not st then
+            if frame.BPF_LevelText then frame.BPF_LevelText:Hide() end
+            return
+        end
         if frame.BPF_LevelText then
             frame.BPF_LevelText:Hide()
         end

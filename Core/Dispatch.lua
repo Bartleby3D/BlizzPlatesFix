@@ -133,21 +133,21 @@ function Dispatch.HandleEvent(event, arg1, arg2, ...)
     end
 
     if event == "PLAYER_REGEN_ENABLED" then
-    -- Apply deferred settings safely out of combat.
-    if NS.Config and NS.Config.CommitPending then
-        NS.Config.CommitPending()
+        -- Apply deferred settings safely out of combat.
+        if NS.Config and NS.Config.CommitPending then
+            NS.Config.CommitPending()
+        end
+        if NS.Profiles and NS.Profiles.CommitPending then
+            NS.Profiles.CommitPending()
+        end
+        RequestAllUpdate(event, false, NS.REASON_ALL)
+        return
     end
-    if NS.Profiles and NS.Profiles.CommitPending then
-        NS.Profiles.CommitPending()
-    end
-    RequestAllUpdate(event, false, NS.REASON_ALL)
-    return
-end
 
-if event == "PLAYER_TARGET_CHANGED" then
-    RequestAllUpdate(event, false, NS.REASON_ALL)
-    return
-end
+    if event == "PLAYER_TARGET_CHANGED" then
+        RequestAllUpdate(event, false, NS.REASON_ALL)
+        return
+    end
 
     -- CVars
     if event == "CVAR_UPDATE" then
@@ -156,10 +156,8 @@ end
         end
         return
     end
-
-
-
-    -- UNIT_AURA: store refreshData for incremental processing (Retail)
+    -- UNIT_AURA: accumulate refreshData for incremental processing (Retail).
+    -- IMPORTANT: never store or mutate the event payload table (arg2); it may be shared with other listeners.
     if event == "UNIT_AURA" then
         local unit = arg1
         local refreshData = arg2
@@ -167,41 +165,45 @@ end
             NS.PendingAuraUpdates = NS.PendingAuraUpdates or {}
             local cur = NS.PendingAuraUpdates[unit]
             if not cur then
-                -- store as-is, but add dedupe sets lazily when merging happens
-                NS.PendingAuraUpdates[unit] = refreshData
-            else
-                if refreshData.isFullUpdate then
-                    cur.isFullUpdate = true
-                    cur.addedAuras = nil
-                    cur.updatedAuraInstanceIDs = nil
-                    cur.removedAuraInstanceIDs = nil
-                    cur._updSet = nil
-                    cur._remSet = nil
-                elseif not cur.isFullUpdate then
-                    if refreshData.addedAuras then
-                        cur.addedAuras = cur.addedAuras or {}
-                        for _, a in ipairs(refreshData.addedAuras) do
-                            cur.addedAuras[#cur.addedAuras + 1] = a
+                cur = {}
+                NS.PendingAuraUpdates[unit] = cur
+            end
+
+            if refreshData.isFullUpdate then
+                cur.isFullUpdate = true
+                cur.addedAuras = nil
+                cur.updatedAuraInstanceIDs = nil
+                cur.removedAuraInstanceIDs = nil
+                cur._updSet = nil
+                cur._remSet = nil
+            elseif not cur.isFullUpdate then
+                if refreshData.addedAuras then
+                    cur.addedAuras = cur.addedAuras or {}
+                    for i = 1, #refreshData.addedAuras do
+                        cur.addedAuras[#cur.addedAuras + 1] = refreshData.addedAuras[i]
+                    end
+                end
+
+                if refreshData.updatedAuraInstanceIDs then
+                    cur.updatedAuraInstanceIDs = cur.updatedAuraInstanceIDs or {}
+                    cur._updSet = cur._updSet or {}
+                    for i = 1, #refreshData.updatedAuraInstanceIDs do
+                        local id = refreshData.updatedAuraInstanceIDs[i]
+                        if id and not cur._updSet[id] then
+                            cur._updSet[id] = true
+                            cur.updatedAuraInstanceIDs[#cur.updatedAuraInstanceIDs + 1] = id
                         end
                     end
-                    if refreshData.updatedAuraInstanceIDs then
-                        cur.updatedAuraInstanceIDs = cur.updatedAuraInstanceIDs or {}
-                        cur._updSet = cur._updSet or {}
-                        for _, id in ipairs(refreshData.updatedAuraInstanceIDs) do
-                            if id and not cur._updSet[id] then
-                                cur._updSet[id] = true
-                                cur.updatedAuraInstanceIDs[#cur.updatedAuraInstanceIDs + 1] = id
-                            end
-                        end
-                    end
-                    if refreshData.removedAuraInstanceIDs then
-                        cur.removedAuraInstanceIDs = cur.removedAuraInstanceIDs or {}
-                        cur._remSet = cur._remSet or {}
-                        for _, id in ipairs(refreshData.removedAuraInstanceIDs) do
-                            if id and not cur._remSet[id] then
-                                cur._remSet[id] = true
-                                cur.removedAuraInstanceIDs[#cur.removedAuraInstanceIDs + 1] = id
-                            end
+                end
+
+                if refreshData.removedAuraInstanceIDs then
+                    cur.removedAuraInstanceIDs = cur.removedAuraInstanceIDs or {}
+                    cur._remSet = cur._remSet or {}
+                    for i = 1, #refreshData.removedAuraInstanceIDs do
+                        local id = refreshData.removedAuraInstanceIDs[i]
+                        if id and not cur._remSet[id] then
+                            cur._remSet[id] = true
+                            cur.removedAuraInstanceIDs[#cur.removedAuraInstanceIDs + 1] = id
                         end
                     end
                 end

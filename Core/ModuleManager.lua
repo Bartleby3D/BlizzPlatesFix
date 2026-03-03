@@ -94,6 +94,7 @@ end
 function M.ResetFrame(frame)
     if not frame then return end
     frame.BPF_ModInit = nil
+    frame.BPF_ConfigCache = nil
 
     for name, mod in pairs(NS.Modules) do
         local _, _, resetFn = ResolveModule(mod)

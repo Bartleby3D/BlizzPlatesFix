@@ -350,7 +350,11 @@ NS.Modules.NameText = {
         ApplyStyle(frame, st, unit, db, gdb)
     end,
     Reset = function(frame)
-        local st = GetState(frame)
+        local st = State[frame]
+        if not st then
+            SetBlizzBlocked(frame, false)
+            return
+        end
         if st.fs then st.fs:Hide() end
         if st.wrapper then st.wrapper:Hide() end
         SetBlizzBlocked(frame, false)

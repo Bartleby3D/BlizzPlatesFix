@@ -343,7 +343,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", "Pandemic Glow", nil, "buffsPandemic", nil, nil, nil, nil, 1)            local buffFilterFriendly = {
+            Add("checkbox", NS.L("Pandemic Glow"), nil, "buffsPandemic", nil, nil, nil, nil, 1)            local buffFilterFriendly = {
                 { text = NS.L("All buffs"), value = "ALL" },
                 { text = NS.L("Only my buffs"), value = "MINE" },
                 { text = NS.L("Only my important buffs"), value = "MINE_IMPORTANT" },
@@ -419,7 +419,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", "Pandemic Glow", nil, "debuffsPandemic", nil, nil, nil, nil, 1)            local debuffFilterFriendly = {
+            Add("checkbox", NS.L("Pandemic Glow"), nil, "debuffsPandemic", nil, nil, nil, nil, 1)            local debuffFilterFriendly = {
                 { text = NS.L("All debuffs"), value = "ALL" },
                 { text = NS.L("Only important debuffs"), value = "IMPORTANT" },
                 { text = NS.L("Only dispelable by me"), value = "DISPEL" },
@@ -495,7 +495,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", "Pandemic Glow", nil, "ccPandemic", nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Pandemic Glow"), nil, "ccPandemic", nil, nil, nil, nil, 1)
             if dbContext == NS.UNIT_TYPES.ENEMY_PLAYER or dbContext == NS.UNIT_TYPES.ENEMY_NPC then
                 Add("checkbox", NS.L("Mine only"), nil, "ccOnlyMine", nil, nil, nil, nil, 1)
             end

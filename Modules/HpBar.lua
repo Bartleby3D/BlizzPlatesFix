@@ -612,23 +612,12 @@ NS.Modules.HpBar = {
         ApplyAbsorbHealToggles(frame, gdb, st)
     end,
     Reset = function(frame)
-        local st = GetState(frame)
-        
-        -- Вызываем вашу родную функцию очистки геометрии
-        DisableCleanup(frame, st)
-
-        -- Сбрасываем кеш визуальных регионов/детей (nameplates могут переиспользоваться)
-        st._hbVisualCacheBuilt = false
-        st._hbVisualCacheHb = nil
-        if st._hbVisualRegions then _wipe(st._hbVisualRegions) end
-        if st._hbVisualChildren then _wipe(st._hbVisualChildren) end
-        if st._hbVisualExtra then _wipe(st._hbVisualExtra) end
-        if st._hbChildVisualRegions then
-            for k in pairs(st._hbChildVisualRegions) do
-                st._hbChildVisualRegions[k] = nil
-            end
+        local st = State[frame]
+        if st then
+            -- Вызываем вашу родную функцию очистки геометрии
+            DisableCleanup(frame, st)
         end
-        
+
         -- Передаем управление цветом обратно движку Blizzard
         if _G.CompactUnitFrame_UpdateHealthColor and frame.unit then
             _G.CompactUnitFrame_UpdateHealthColor(frame)
