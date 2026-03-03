@@ -1,5 +1,4 @@
-local AddonName, NS = ...
-
+local _, NS = ...
 NS.HooksDispatch = NS.HooksDispatch or {}
 
 -- Троттл для хуков CompactUnitFrame (иначе hover/частые апдейты могут спамить очередь)
