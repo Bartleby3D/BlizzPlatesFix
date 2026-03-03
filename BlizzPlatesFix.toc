@@ -2,7 +2,7 @@
 ## Title: BlizzPlatesFix
 ## Notes: Modular NamePlates
 ## Author: Archer#2848
-## Version: 1.0
+## Version: 1.0.1
 ## SavedVariables: BlizzPlatesFixDB
 ## IconTexture: Interface\AddOns\BlizzPlatesFix\Media\BPFIcon.tga
 ## X-License: All Rights Reserved
@@ -10,6 +10,7 @@
 
 Libs\LibStub\LibStub.lua
 Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibRangeCheck-3.0\LibRangeCheck-3.0.lua
 Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 Libs\LibDBIcon-1.0\lib.xml
 Libs\LibSharedMedia-3.0\lib.xml
