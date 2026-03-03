@@ -1,4 +1,4 @@
-local AddonName, NS = ...
+local _, NS = ...
 NS.Modules = NS.Modules or {}
 
 -- =============================================================
@@ -110,8 +110,8 @@ function NS.UpdateAllModules(unit, reasonMask)
         namePlate = C_NamePlate.GetNamePlateForUnit(unit)
     end
 
-    if coreNeeded then
-    -- 2) Глобальные настройки (Масштаб, Позиция) + Размеры из профиля юнита
+	if coreNeeded then
+	    -- 2) Глобальные настройки (Масштаб, Позиция) + Размеры из профиля юнита
     if namePlate then
         local scale = dbGlobal.globalScale or 1.0
         if scale < 0.1 then scale = 0.1 end
@@ -127,7 +127,7 @@ function NS.UpdateAllModules(unit, reasonMask)
         else
             w = dbUnit.plateWidth or 110
             h = dbUnit.plateHeight or 8
-        end
+	    	end
 
         local cache = frame.BPF_CoreCache
         if not cache then
@@ -152,39 +152,9 @@ function NS.UpdateAllModules(unit, reasonMask)
         if cache.w ~= w or cache.h ~= h then
             frame:SetSize(w, h)
             cache.w, cache.h = w, h
-        end
-    end
-
-    -- 3) Скрытие в инстансах (Оставляем логику, используя Global)
-    -- Если хочешь, можно вынести это тоже в настройки профиля
-    local inInstance, instanceType = IsInInstance()
-    local shouldHide = false
-
-    if inInstance and (instanceType == "party" or instanceType == "raid" or instanceType == "pvp" or instanceType == "arena") then
-        if UnitIsFriend("player", unit) and not UnitIsUnit("player", unit) then
-            -- Пока используем глобальную настройку
-            if dbGlobal.classifHideAllies then
-                -- Логика скрытия всего фрейма или только иконки? 
-                -- В старом коде тут было скрытие фрейма. Если нужно, раскомментируй:
-                -- shouldHide = true
-            end
-        end
-    end
-
-    if shouldHide then
-        if frame.BPF_InstanceHidden ~= true then
-            frame:SetAlpha(0)
-            frame.BPF_InstanceHidden = true
-        end
-        return
-    else
-        if frame.BPF_InstanceHidden then
-            frame:SetAlpha(1)
-            frame.BPF_InstanceHidden = nil
-        end
-    end
-
-    end
+	    end
+	end
+	end
 
     -- 4) Запуск модулей
     -- Передаем им настройки ЮНИТА и ГЛОБАЛЬНЫЕ
