@@ -11,8 +11,8 @@ local function GetState(frame)
     st = {
         lastVisible = nil,
         lastFaction = nil,
-        lastSize = nil,
-        lastPosKey = nil,
+        lastSize = nil,        lastX = nil,
+        lastY = nil,
         lastParent = nil,
     }
     State[frame] = st
@@ -95,12 +95,12 @@ local function Update(frame, unit, dbUnit, dbGlobal)
 
     local offX = dbGlobal.factionIconX or 0
     local offY = dbGlobal.factionIconY or 0
-    local posKey = offX .. "|" .. offY
-    if st.lastPosKey ~= posKey then
+    if st.lastX ~= offX or st.lastY ~= offY then
         icon:ClearAllPoints()
         icon:SetPoint("CENTER", frame.healthBar, "CENTER", offX, offY)
-        st.lastPosKey = posKey
+        st.lastX, st.lastY = offX, offY
     end
+
 end
 
 NS.Modules.FactionIcon = {
@@ -116,7 +116,8 @@ NS.Modules.FactionIcon = {
             st.lastVisible = nil
             st.lastFaction = nil
             st.lastSize = nil
-            st.lastPosKey = nil
+            st.lastX = nil
+            st.lastY = nil
             st.lastParent = nil
         end
     end,

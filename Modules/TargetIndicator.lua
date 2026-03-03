@@ -33,24 +33,27 @@ local function GetState(frame)
         arrowShown = nil,
         arrowAnim = nil,
         arrowSize = nil,
-        arrowPosKey = nil,
-        arrowColorKey = nil,
+        arrowX = nil,
+        arrowY = nil,
+        arrowColorR = nil,
+        arrowColorG = nil,
+        arrowColorB = nil,
         
         -- Кэш состояния символов
         symShown = nil,
         symOutline = nil,
         symSize = nil,
-        symPosKey = nil,
-        symColorKey = nil,
+        symX = nil,
+        symY = nil,
+        symColorR = nil,
+        symColorG = nil,
+        symColorB = nil,
         symPairIndex = nil,
     }
     State[frame] = st
     return st
 end
 
-local function ColorKey(r, g, b)
-    return string.format("%.3f|%.3f|%.3f", r or 1, g or 1, b or 1)
-end
 
 -- Создаем объекты (Текстуру стрелки и Текст символов)
 local function EnsureObjects(frame)
@@ -106,8 +109,16 @@ local function HideAll(frame, st)
     -- st.arrowAnim уже == true, и блок включения анимации не срабатывает.
     st.arrowAnim = nil
     st.symShown = false
-    st.arrowPosKey = nil
-    st.symPosKey = nil
+    st.arrowX = nil
+    st.arrowY = nil
+    st.symX = nil
+    st.symY = nil
+    st.arrowColorR = nil
+    st.arrowColorG = nil
+    st.arrowColorB = nil
+    st.symColorR = nil
+    st.symColorG = nil
+    st.symColorB = nil
 end
 
 local function UpdateTargetIndicator(frame, unit, db, gdb)
@@ -170,20 +181,21 @@ local function UpdateTargetIndicator(frame, unit, db, gdb)
         
         local ax = db.targetIndicatorArrowX or 0
         local ay = db.targetIndicatorArrowY or 20
-        local posKey = ax .. "|" .. ay
-        
-        if st.arrowPosKey ~= posKey then
+
+        if st.arrowX ~= ax or st.arrowY ~= ay then
             arrow:ClearAllPoints()
             arrow:SetPoint("BOTTOM", frame.healthBar, "TOP", ax, ay)
-            st.arrowPosKey = posKey
+            st.arrowX, st.arrowY = ax, ay
         end
-        
-        local ac = db.targetIndicatorArrowColor or { r=1, g=1, b=1 }
-        local acKey = ColorKey(ac.r, ac.g, ac.b)
-        
-        if st.arrowColorKey ~= acKey then 
-            arrow:SetVertexColor(ac.r, ac.g, ac.b)
-            st.arrowColorKey = acKey 
+
+        local ac = db.targetIndicatorArrowColor
+        local r = (ac and ac.r) or 1
+        local g = (ac and ac.g) or 1
+        local b = (ac and ac.b) or 1
+
+        if st.arrowColorR ~= r or st.arrowColorG ~= g or st.arrowColorB ~= b then
+            arrow:SetVertexColor(r, g, b)
+            st.arrowColorR, st.arrowColorG, st.arrowColorB = r, g, b
         end
         
         local wantAnim = db.targetIndicatorArrowAnim and true or false
@@ -255,25 +267,26 @@ local function UpdateTargetIndicator(frame, unit, db, gdb)
         end
 
         -- Цвет
-        local sc = db.targetIndicatorSymbolColor or { r=1, g=1, b=1 }
-        local scKey = ColorKey(sc.r, sc.g, sc.b)
-        if st.symColorKey ~= scKey then
-            left:SetTextColor(sc.r, sc.g, sc.b)
-            right:SetTextColor(sc.r, sc.g, sc.b)
-            st.symColorKey = scKey
+        local sc = db.targetIndicatorSymbolColor
+        local r = (sc and sc.r) or 1
+        local g = (sc and sc.g) or 1
+        local b = (sc and sc.b) or 1
+        if st.symColorR ~= r or st.symColorG ~= g or st.symColorB ~= b then
+            left:SetTextColor(r, g, b)
+            right:SetTextColor(r, g, b)
+            st.symColorR, st.symColorG, st.symColorB = r, g, b
         end
 
         -- Позиция
         local sx = db.targetIndicatorSymbolX or 10
         local sy = db.targetIndicatorSymbolY or 0
-        local symPosKey = sx .. "|" .. sy
-        
-        if st.symPosKey ~= symPosKey then
+
+        if st.symX ~= sx or st.symY ~= sy then
             left:ClearAllPoints()
             right:ClearAllPoints()
             left:SetPoint("RIGHT", frame.healthBar, "LEFT", -sx, sy)
             right:SetPoint("LEFT", frame.healthBar, "RIGHT", sx, sy)
-            st.symPosKey = symPosKey
+            st.symX, st.symY = sx, sy
         end
     else
         -- Если символы выключены

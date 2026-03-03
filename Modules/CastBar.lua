@@ -1,10 +1,6 @@
 local _, NS = ...
 
 local STANDARD_TEXT_FONT = _G.STANDARD_TEXT_FONT
-
-local HiddenFrame = CreateFrame("Frame")
-HiddenFrame:Hide()
-
 local CastBarState = setmetatable({}, { __mode = "k" }) -- key = castBar
 
 local function ApplyBarVisibility(cb, db)
@@ -37,11 +33,23 @@ end
 
 local function GetClassColorRGB(unit)
     if not unit or not UnitExists(unit) then return 0.8, 0.8, 0.8 end
-    local _, classFile = UnitClass(unit)
-    if classFile then
-        local c = C_ClassColor.GetClassColor(classFile)
-        if c then return c.r, c.g, c.b end
+    
+    -- 1. Игроки и компаньоны (например, Бранн): красим по классу
+    if UnitIsPlayer(unit) or (UnitTreatAsPlayerForDisplay and UnitTreatAsPlayerForDisplay(unit)) then
+        local _, classFile = UnitClass(unit)
+        if classFile then
+            local c = C_ClassColor.GetClassColor(classFile)
+            if c then return c.r, c.g, c.b end
+        end
     end
+    
+    -- 2. Остальные NPC: красим по стандартной реакции (Враг = красный, Нейтрал = желтый, Друг = зеленый)
+    local r, g, b = UnitSelectionColor(unit)
+    if r and g and b then
+        return r, g, b
+    end
+    
+    -- 3. Фоллбэк на случай непредвиденных ошибок API
     return 0.8, 0.8, 0.8
 end
 
@@ -94,7 +102,11 @@ local function UpdateTargetText(cb, st, db)
 
     local unit = st.unit
 
-    local unitTarget = unit .. "target"
+    if st.lastUnit ~= unit then
+        st.unitTarget = unit .. "target"
+        st.lastUnit = unit
+    end
+    local unitTarget = st.unitTarget
     local name = UnitName(unitTarget)
     if name then
         st.targetText:SetText(" |cffFF0000=>|r " .. name)
@@ -103,8 +115,11 @@ local function UpdateTargetText(cb, st, db)
             local cr, cg, cbCol = GetClassColorRGB(unitTarget)
             st.targetText:SetTextColor(cr, cg, cbCol)
         else
-            local tc = db.cbTargetColor or { r = 0.8, g = 0.8, b = 0.8 }
-            st.targetText:SetTextColor(tc.r, tc.g, tc.b)
+            local tc = db.cbTargetColor
+            local r = (tc and tc.r) or 0.8
+            local g = (tc and tc.g) or 0.8
+            local b = (tc and tc.b) or 0.8
+            st.targetText:SetTextColor(r, g, b)
         end
 
         st.targetText:Show()
@@ -302,8 +317,11 @@ local function UpdateCastBarLayout(frame, unit, db, gdb)
         st.castText:SetWidth(db.cbTextMaxLength > 0 and (db.cbTextMaxLength * (fSize * 0.75)) or (barW - 8))
         st.castText:SetWordWrap(false)
 
-        local tc = db.cbTextColor or { r = 1, g = 1, b = 1 }
-        st.castText:SetTextColor(tc.r, tc.g, tc.b)
+        local tc = db.cbTextColor
+        local r = (tc and tc.r) or 1
+        local g = (tc and tc.g) or 1
+        local b = (tc and tc.b) or 1
+        st.castText:SetTextColor(r, g, b)
         st.castText:Show()
     else
         st.castText:Hide()

@@ -8,16 +8,14 @@ local function GetState(frame)
     st = {
         lastVisible = nil,
         lastScale = nil,
-        lastColorKey = nil,
+        lastColorR = nil,
+        lastColorG = nil,
+        lastColorB = nil,
     }
     State[frame] = st
     return st
 end
 
-local function ColorKey(c)
-    if not c then return "nil" end
-    return string.format("%.3f|%.3f|%.3f", c.r or 1, c.g or 1, c.b or 1)
-end
 
 -- Добавляем аргументы unit, db, gdb
 local function UpdateBorder(frame, unit, db, gdb)
@@ -55,7 +53,9 @@ local function UpdateBorder(frame, unit, db, gdb)
 
     if not shouldShow then
         st.lastScale = nil
-        st.lastColorKey = nil
+        st.lastColorR = nil
+        st.lastColorG = nil
+        st.lastColorB = nil
         return
     end
 
@@ -67,11 +67,13 @@ local function UpdateBorder(frame, unit, db, gdb)
     end
 
     -- Твоя логика цвета
-    local c = db.targetBorderColor or { r=1, g=1, b=1 }
-    local ck = ColorKey(c)
-    if st.lastColorKey ~= ck then
-        border:SetVertexColor(c.r, c.g, c.b, 1)
-        st.lastColorKey = ck
+    local c = db.targetBorderColor
+    local r = (c and c.r) or 1
+    local g = (c and c.g) or 1
+    local b = (c and c.b) or 1
+    if st.lastColorR ~= r or st.lastColorG ~= g or st.lastColorB ~= b then
+        border:SetVertexColor(r, g, b, 1)
+        st.lastColorR, st.lastColorG, st.lastColorB = r, g, b
     end
 end
 
@@ -88,6 +90,8 @@ NS.Modules.Border = {
         local st = GetState(frame)
         st.lastVisible = false
         st.lastScale = nil
-        st.lastColorKey = nil
+        st.lastColorR = nil
+        st.lastColorG = nil
+        st.lastColorB = nil
     end
 }

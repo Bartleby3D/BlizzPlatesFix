@@ -13,7 +13,8 @@ local function GetState(frame)
         lastVisible = nil,
         lastAtlas = nil,
         lastSize = nil,
-        lastPosKey = nil,
+        lastX = nil,
+        lastY = nil,
         lastMirror = nil,
         lastBlizzShown = nil,
     }
@@ -155,11 +156,10 @@ local function UpdateIcon(frame, unit, db, gdb)
 
     local offX = gdb.classifX or 0
     local offY = gdb.classifY or 0
-    local posKey = offX .. "|" .. offY
-    if st.lastPosKey ~= posKey then
+    if st.lastX ~= offX or st.lastY ~= offY then
         icon:ClearAllPoints()
         icon:SetPoint("CENTER", frame.healthBar, "CENTER", offX, offY)
-        st.lastPosKey = posKey
+        st.lastX, st.lastY = offX, offY
     end
 
     local mirror = gdb.classifMirror and true or false

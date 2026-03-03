@@ -1,5 +1,7 @@
 local _, NS = ...
 
+local RangeCheck = LibStub and LibStub("LibRangeCheck-3.0", true)
+
 -- Spell IDs для проверки дистанции (Твой список)
 local SPELLS = {
     ["WARRIOR"] = {
@@ -72,6 +74,8 @@ local function GetState(frame)
         lastOutOfRange = false,
         lastRangeUnit = nil,
         lastSpellID = nil,
+        lastRangeYards = nil,
+        lastRangeMethod = nil,
     }
     State[frame] = st
     return st
@@ -89,7 +93,40 @@ local function ApplyAlpha(frame, st, alpha)
     end
 end
 
-local function IsOutOfRange(unit, st)
+local function IsOutOfRange(unit, st, rangeYards)
+    -- Prefer LibRangeCheck-3.0 when available (handles low level / missing spells better).
+    if RangeCheck and rangeYards then
+        local now = GetTime()
+        if st.lastRangeMethod == "rc"
+            and st.lastRangeUnit == unit
+            and st.lastRangeYards == rangeYards
+            and (now - st.lastRangeCheckT) < RANGE_TTL
+        then
+            return st.lastOutOfRange
+        end
+
+        st.lastRangeMethod = "rc"
+        st.lastRangeUnit = unit
+        st.lastRangeYards = rangeYards
+        st.lastRangeCheckT = now
+        st.lastSpellID = nil
+
+        local minRange, maxRange = RangeCheck:GetRange(unit)
+        if minRange then
+            local out
+            if not maxRange then
+                -- "over minRange"
+                out = (minRange >= rangeYards)
+            else
+                -- definitely out only when the minimum exceeds the threshold
+                out = (minRange > rangeYards)
+            end
+            st.lastOutOfRange = out
+            return out
+        end
+        -- If LibRangeCheck can't determine range, fall back to spell-based logic.
+    end
+
     local classSpells = SPELLS[playerClass]
     if not classSpells then return false end
 
@@ -99,12 +136,18 @@ local function IsOutOfRange(unit, st)
     if not IsPlayerSpell(spellID) then return false end
 
     local now = GetTime()
-    if st.lastRangeUnit == unit and st.lastSpellID == spellID and (now - st.lastRangeCheckT) < RANGE_TTL then
+    if st.lastRangeMethod == "spell"
+        and st.lastRangeUnit == unit
+        and st.lastSpellID == spellID
+        and (now - st.lastRangeCheckT) < RANGE_TTL
+    then
         return st.lastOutOfRange
     end
 
+    st.lastRangeMethod = "spell"
     st.lastRangeUnit = unit
     st.lastSpellID = spellID
+    st.lastRangeYards = nil
     st.lastRangeCheckT = now
 
     local inRange = C_Spell.IsSpellInRange(spellID, unit)
@@ -115,6 +158,7 @@ local function IsOutOfRange(unit, st)
     st.lastOutOfRange = out
     return out
 end
+
 
 -- ВНИМАНИЕ: Используем gdb (Глобальные настройки)
 local function UpdateTransparency(frame, unit, db, gdb)
@@ -140,12 +184,16 @@ local function UpdateTransparency(frame, unit, db, gdb)
     if aSetting < 0 then aSetting = 0 end
     if aSetting > 1 then aSetting = 1 end
 
+    local rangeYards = gdb.transparencyRange or 40
+    if rangeYards < 5 then rangeYards = 5 end
+    if rangeYards > 60 then rangeYards = 60 end
+
     local alpha = 1
 
     if mode == 1 then
         alpha = aSetting
     else
-        alpha = IsOutOfRange(unit, st) and aSetting or 1
+        alpha = IsOutOfRange(unit, st, rangeYards) and aSetting or 1
     end
 
     ApplyAlpha(frame, st, alpha)

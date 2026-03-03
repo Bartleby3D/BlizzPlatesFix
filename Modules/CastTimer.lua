@@ -76,10 +76,13 @@ local function ApplyStyleAndPosition(cb, st)
         st.lastShadow = wantShadow
     end
 
-    local c = db.cbTimerColor or { r = 1, g = 1, b = 1 }
-    if st.lastColorR ~= c.r or st.lastColorG ~= c.g or st.lastColorB ~= c.b then
-        st.text:SetTextColor(c.r, c.g, c.b)
-        st.lastColorR, st.lastColorG, st.lastColorB = c.r, c.g, c.b
+    local c = db.cbTimerColor
+    local r = (c and c.r) or 1
+    local g = (c and c.g) or 1
+    local b = (c and c.b) or 1
+    if st.lastColorR ~= r or st.lastColorG ~= g or st.lastColorB ~= b then
+        st.text:SetTextColor(r, g, b)
+        st.lastColorR, st.lastColorG, st.lastColorB = r, g, b
     end
 
     local x = db.cbTimerX or 0
@@ -153,7 +156,7 @@ TimerManager:SetScript("OnUpdate", function(_, elapsed)
             if durationObj then
                 local timeLeft = durationObj:GetRemainingDuration()
                 local fmt = st.db and st.db.cbTimerFormat or "%.1f"
-                st.text:SetText(string.format(fmt, timeLeft))
+                st.text:SetFormattedText(fmt, timeLeft)
                 st.text:Show()
             else
                 st.text:Hide()

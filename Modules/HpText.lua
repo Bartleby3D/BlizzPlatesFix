@@ -40,26 +40,22 @@ local function GetState(frame)
     local st = State[frame]
     if st then return st end
     st = {
-        lastFontKey   = nil,
-        lastColorKey  = nil,
-        lastLayoutKey = nil,
+        lastFontPath  = nil,
+        lastFontSize  = nil,
+        lastFontFlag  = nil,
+        lastFontStyle = nil,
+        lastColorR    = nil,
+        lastColorG    = nil,
+        lastColorB    = nil,
+        lastColorMode = nil,
+        lastLayoutMode = nil,
+        lastLayoutAlign = nil,
+        lastLayoutX = nil,
+        lastLayoutY = nil,
         lastMode      = nil,
     }
     State[frame] = st
     return st
-end
-
-local function IsSimplifiedNotTarget(frame, unit)
-    if frame and frame.IsSimplified and frame:IsSimplified() then
-        if frame.IsTarget and frame:IsTarget() then
-            return false
-        end
-        if unit and UnitIsUnit and UnitIsUnit(unit, "target") then
-            return false
-        end
-        return true
-    end
-    return false
 end
 
 local function GetLabels(frame, gdb)
@@ -144,7 +140,7 @@ local function UpdateHpText(frame, unit, db, gdb)
 
     local st = GetState(frame)
 
-    local simplifiedHidden = IsSimplifiedNotTarget(frame, unit)
+    local simplifiedHidden = NS.IsSimplifiedNotTarget(frame, unit)
     if simplifiedHidden then
         if frame.BPF_ValueText then
             frame.BPF_ValueText:Hide()
@@ -157,7 +153,10 @@ local function UpdateHpText(frame, unit, db, gdb)
     elseif st._wasSimplifiedHidden then
         -- Leaving simplified mode (or became target): force layout to re-show labels
         st._wasSimplifiedHidden = false
-        st.lastLayoutKey = nil
+        st.lastLayoutMode = nil
+        st.lastLayoutAlign = nil
+        st.lastLayoutX = nil
+        st.lastLayoutY = nil
         st.lastMode = nil
     end
 
@@ -177,7 +176,10 @@ local function UpdateHpText(frame, unit, db, gdb)
     -- иначе лейаут-блок не выполнится (ключи те же) и лейблы останутся скрытыми до релога.
     if st._disabled then
         st._disabled = false
-        st.lastLayoutKey = nil
+        st.lastLayoutMode = nil
+        st.lastLayoutAlign = nil
+        st.lastLayoutX = nil
+        st.lastLayoutY = nil
         st.lastMode = nil
     end
 
@@ -188,22 +190,51 @@ local function UpdateHpText(frame, unit, db, gdb)
     local size = db.hpFontSize or 10
     local style = db.hpFontOutline or "OUTLINE"
     local fontStyle = (style == "NONE" or style == "SHADOW") and "" or style
-
-    local fontKey = (activePath or "") .. "|" .. size .. "|" .. fontStyle .. "|" .. style
-    if st.lastFontKey ~= fontKey then
-        for _, l in ipairs({vL, bL, pL, bR}) do
-            if not l:SetFont(activePath, size, fontStyle) then
-                l:SetFont(STANDARD_TEXT_FONT, size, fontStyle)
-            end
-
-            if style == "SHADOW" then
-                l:SetShadowOffset(1, -1)
-                l:SetShadowColor(0, 0, 0, 1)
-            else
-                l:SetShadowOffset(0, 0)
-            end
+    if st.lastFontPath ~= activePath or st.lastFontSize ~= size or st.lastFontFlag ~= fontStyle or st.lastFontStyle ~= style then
+        if not vL:SetFont(activePath, size, fontStyle) then
+            vL:SetFont(STANDARD_TEXT_FONT, size, fontStyle)
         end
-        st.lastFontKey = fontKey
+        if style == "SHADOW" then
+            vL:SetShadowOffset(1, -1)
+            vL:SetShadowColor(0, 0, 0, 1)
+        else
+            vL:SetShadowOffset(0, 0)
+        end
+
+        if not bL:SetFont(activePath, size, fontStyle) then
+            bL:SetFont(STANDARD_TEXT_FONT, size, fontStyle)
+        end
+        if style == "SHADOW" then
+            bL:SetShadowOffset(1, -1)
+            bL:SetShadowColor(0, 0, 0, 1)
+        else
+            bL:SetShadowOffset(0, 0)
+        end
+
+        if not pL:SetFont(activePath, size, fontStyle) then
+            pL:SetFont(STANDARD_TEXT_FONT, size, fontStyle)
+        end
+        if style == "SHADOW" then
+            pL:SetShadowOffset(1, -1)
+            pL:SetShadowColor(0, 0, 0, 1)
+        else
+            pL:SetShadowOffset(0, 0)
+        end
+
+        if not bR:SetFont(activePath, size, fontStyle) then
+            bR:SetFont(STANDARD_TEXT_FONT, size, fontStyle)
+        end
+        if style == "SHADOW" then
+            bR:SetShadowOffset(1, -1)
+            bR:SetShadowColor(0, 0, 0, 1)
+        else
+            bR:SetShadowOffset(0, 0)
+        end
+
+        st.lastFontPath = activePath
+        st.lastFontSize = size
+        st.lastFontFlag = fontStyle
+        st.lastFontStyle = style
     end
 
     -- 3) LAYOUT
@@ -211,10 +242,11 @@ local function UpdateHpText(frame, unit, db, gdb)
     local align = db.hpTextAlign or "CENTER"
     local offX  = db.hpOffsetX or 0
     local offY  = db.hpOffsetY or 0
-
-    local layoutKey = mode .. "|" .. align .. "|" .. offX .. "|" .. offY
-    if st.lastLayoutKey ~= layoutKey then
-        st.lastLayoutKey = layoutKey
+    if st.lastLayoutMode ~= mode or st.lastLayoutAlign ~= align or st.lastLayoutX ~= offX or st.lastLayoutY ~= offY then
+        st.lastLayoutMode = mode
+        st.lastLayoutAlign = align
+        st.lastLayoutX = offX
+        st.lastLayoutY = offY
 
         vL:ClearAllPoints()
         bL:ClearAllPoints()
@@ -276,18 +308,24 @@ local function UpdateHpText(frame, unit, db, gdb)
     local modeKey = useGradient and "__gradient__" or "__static__"
     if st.lastMode ~= modeKey then
         st.lastMode = modeKey
-        st.lastColorKey = nil
+        st.lastColorR = nil
+        st.lastColorG = nil
+        st.lastColorB = nil
+        st.lastColorMode = nil
     end
 
     if useGradient and HpColorCurve then
         ApplyGradientColor(unit, vL, bL, pL, bR, mode)
-        st.lastColorKey = "__gradient__"
+        st.lastColorMode = "__gradient__"
     else
-        local color = db.hpColor or {r=1, g=1, b=1}
-        local colorKey = (color.r or 1) .. "|" .. (color.g or 1) .. "|" .. (color.b or 1) .. "|" .. mode
-        if st.lastColorKey ~= colorKey then
+        local color = db.hpColor
+        local r = (color and color.r) or 1
+        local g = (color and color.g) or 1
+        local b = (color and color.b) or 1
+        if st.lastColorR ~= r or st.lastColorG ~= g or st.lastColorB ~= b or st.lastColorMode ~= mode then
             ApplyStaticColor(vL, bL, pL, bR, mode, color)
-            st.lastColorKey = colorKey
+            st.lastColorR, st.lastColorG, st.lastColorB = r, g, b
+            st.lastColorMode = mode
         end
     end
 

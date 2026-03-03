@@ -6,11 +6,14 @@ local function GetState(frame)
     local st = State[frame]
     if st then return st end
     st = {
-        geomKey = nil,
+        lastW = nil,
+        lastH = nil,
         castKey = nil,
         lastAbsorbHide = nil,
         lastHealHide   = nil,
-        lastColorKey   = nil,
+        lastColorR   = nil,
+        lastColorG   = nil,
+        lastColorB   = nil,
         lastUnit       = nil,
         combatRedUntil = 0,
         applied = false,
@@ -74,9 +77,12 @@ local function DisableCleanup(frame, st)
         frame.selectionHighlight:SetAllPoints(hb)
     end
 
-    st.geomKey = nil
+    st.lastW = nil
+    st.lastH = nil
     st.castKey = nil
-    st.lastColorKey = nil
+    st.lastColorR = nil
+    st.lastColorG = nil
+    st.lastColorB = nil
     st.applied = false
 end
 
@@ -88,9 +94,7 @@ end
 
 -- Приводим значения из DB к "обычным" числам (избавляемся от возможных secret-number/taint через tostring->tonumber).
 local function SafeNumber(v, fallback)
-    local n = tonumber(tostring(v))
-    if not n then return fallback end
-    return n
+    return type(v) == "number" and v or fallback
 end
 
 local function GetAlphaSafe(obj, fallback)
@@ -100,11 +104,132 @@ local function GetAlphaSafe(obj, fallback)
     return fallback
 end
 
+local _wipe = wipe
+if not _wipe then
+    _wipe = function(t)
+        for k in pairs(t) do t[k] = nil end
+    end
+end
+
+local function FillArray(dst, ...)
+    _wipe(dst)
+    local n = select("#", ...)
+    for i = 1, n do
+        dst[i] = select(i, ...)
+    end
+    return n
+end
+
+local function BuildHealthBarVisualCache(frame, hb, st)
+    if not hb then return end
+    if st._hbVisualCacheHb == hb and st._hbVisualCacheBuilt then return end
+
+    st._hbVisualCacheHb = hb
+    st._hbVisualCacheBuilt = true
+
+    st._hbVisualRegions = st._hbVisualRegions or {}
+    st._hbVisualChildren = st._hbVisualChildren or {}
+    st._hbChildVisualRegions = st._hbChildVisualRegions or setmetatable({}, { __mode = "k" })
+    st._hbVisualExtra = st._hbVisualExtra or {}
+
+    _wipe(st._hbVisualRegions)
+    _wipe(st._hbVisualChildren)
+    _wipe(st._hbVisualExtra)
+
+    -- Cache: hb regions (only Texture/MaskTexture with SetAlpha)
+    if hb.GetRegions then
+        local tmp = st._hbTmpRegions or {}
+        st._hbTmpRegions = tmp
+        local n = FillArray(tmp, hb:GetRegions())
+        local outN = 0
+        for i = 1, n do
+            local r = tmp[i]
+            if r and r.GetObjectType and r.SetAlpha then
+                local t = r:GetObjectType()
+                if t == "Texture" or t == "MaskTexture" then
+                    outN = outN + 1
+                    st._hbVisualRegions[outN] = r
+                end
+            end
+        end
+    end
+
+    -- Cache: hb children and their regions (same filtering)
+    if hb.GetChildren then
+        local tmp = st._hbTmpChildren or {}
+        st._hbTmpChildren = tmp
+        local n = FillArray(tmp, hb:GetChildren())
+        local outN = 0
+        for i = 1, n do
+            local ch = tmp[i]
+            if ch then
+                outN = outN + 1
+                st._hbVisualChildren[outN] = ch
+
+                if ch.GetRegions then
+                    local creg = st._hbChildVisualRegions[ch]
+                    if not creg then
+                        creg = {}
+                        st._hbChildVisualRegions[ch] = creg
+                    else
+                        _wipe(creg)
+                    end
+
+                    local ctmp = st._hbTmpChildRegions or {}
+                    st._hbTmpChildRegions = ctmp
+                    local cn = FillArray(ctmp, ch:GetRegions())
+                    local cout = 0
+                    for j = 1, cn do
+                        local r = ctmp[j]
+                        if r and r.GetObjectType and r.SetAlpha then
+                            local t = r:GetObjectType()
+                            if t == "Texture" or t == "MaskTexture" then
+                                cout = cout + 1
+                                creg[cout] = r
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- Cache: common aliases (avoid per-call table allocation)
+    local ex = st._hbVisualExtra
+    local n = 0
+    local function Add(o)
+        if o then
+            n = n + 1
+            ex[n] = o
+        end
+    end
+    Add(frame and frame.healthBarBackground)
+    Add(frame and frame.healthBarBorder)
+    Add(frame and frame.healthBarBackdrop)
+    Add(hb.background)
+    Add(hb.bg)
+    Add(hb.Bg)
+    Add(hb.Background)
+    Add(hb.border)
+    Add(hb.Border)
+    Add(hb.barTexture)
+    Add(hb.bgTexture)
+    Add(hb.overAbsorbGlow)
+    Add(hb.overHealAbsorbGlow)
+    Add(hb.myHealPrediction)
+    Add(hb.otherHealPrediction)
+end
+
 -- Надежно прячет визуальные слои хпбара (текстуры/фон/оверлеи),
 -- но НЕ трогает альфу самого healthBar фрейма и его детей (иначе можно скрыть чужие FontString'и, например имя).
 -- Идея: оставляем hb как контейнер (alpha=1), а "картинку" прячем через альфу текстур.
 local function SetHealthBarVisualAlpha(frame, hb, a)
     if not hb then return end
+
+    local st = frame and GetState(frame)
+    if st then
+        BuildHealthBarVisualCache(frame, hb, st)
+    end
 
     -- Не меняем hb:SetAlpha(a) специально.
 
@@ -113,7 +238,16 @@ local function SetHealthBarVisualAlpha(frame, hb, a)
     if sbt and sbt.SetAlpha then sbt:SetAlpha(a) end
 
     -- 2) Регионы самого hb (только текстуры/маски)
-    if hb.GetRegions then
+    if st and st._hbVisualRegions then
+        local regs = st._hbVisualRegions
+        for i = 1, #regs do
+            local r = regs[i]
+            if r and r.SetAlpha then
+                r:SetAlpha(a)
+            end
+        end
+    elseif hb.GetRegions then
+        -- Fallback: should be rare
         local regs = { hb:GetRegions() }
         for i = 1, #regs do
             local r = regs[i]
@@ -127,7 +261,28 @@ local function SetHealthBarVisualAlpha(frame, hb, a)
     end
 
     -- 3) Дети hb: не трогаем их alpha, прячем только их текстурные регионы/StatusBarTexture
-    if hb.GetChildren then
+    if st and st._hbVisualChildren then
+        local children = st._hbVisualChildren
+        local childRegs = st._hbChildVisualRegions
+        for i = 1, #children do
+            local ch = children[i]
+            if ch then
+                local cst = ch.GetStatusBarTexture and ch:GetStatusBarTexture()
+                if cst and cst.SetAlpha then cst:SetAlpha(a) end
+
+                local cregs = childRegs and childRegs[ch]
+                if cregs then
+                    for j = 1, #cregs do
+                        local r = cregs[j]
+                        if r and r.SetAlpha then
+                            r:SetAlpha(a)
+                        end
+                    end
+                end
+            end
+        end
+    elseif hb.GetChildren then
+        -- Fallback: should be rare
         local children = { hb:GetChildren() }
         for i = 1, #children do
             local ch = children[i]
@@ -152,20 +307,30 @@ local function SetHealthBarVisualAlpha(frame, hb, a)
     end
 
     -- 4) Часто используемые алиасы у Blizzard/аддонов
-    local extra = {
-        frame and frame.healthBarBackground,
-        frame and frame.healthBarBorder,
-        frame and frame.healthBarBackdrop,
-        hb.background, hb.bg, hb.Bg, hb.Background,
-        hb.border, hb.Border,
-        hb.barTexture, hb.bgTexture,
-        hb.overAbsorbGlow, hb.overHealAbsorbGlow,
-        hb.myHealPrediction, hb.otherHealPrediction,
-    }
-    for i = 1, #extra do
-        local o = extra[i]
-        if o and o.SetAlpha then
-            o:SetAlpha(a)
+    if st and st._hbVisualExtra then
+        local extra = st._hbVisualExtra
+        for i = 1, #extra do
+            local o = extra[i]
+            if o and o.SetAlpha then
+                o:SetAlpha(a)
+            end
+        end
+    else
+        local extra = {
+            frame and frame.healthBarBackground,
+            frame and frame.healthBarBorder,
+            frame and frame.healthBarBackdrop,
+            hb.background, hb.bg, hb.Bg, hb.Background,
+            hb.border, hb.Border,
+            hb.barTexture, hb.bgTexture,
+            hb.overAbsorbGlow, hb.overHealAbsorbGlow,
+            hb.myHealPrediction, hb.otherHealPrediction,
+        }
+        for i = 1, #extra do
+            local o = extra[i]
+            if o and o.SetAlpha then
+                o:SetAlpha(a)
+            end
         end
     end
 end
@@ -176,8 +341,8 @@ local function ComputeDesiredColor(frame, unit, db)
     -- (Игнорируем угрозу и прочее, если игрок захотел жестко задать цвет)
     if db.healthColorMode == 2 then
         -- Для NPC-вкладок: отдельные цвета для разных реакций
-        local enemyNpcDB = NS.Config and NS.Config.GetUnitTypeTable and NS.Config.GetUnitTypeTable(NS.UNIT_TYPES.ENEMY_NPC)
-        local friendlyNpcDB = NS.Config and NS.Config.GetUnitTypeTable and NS.Config.GetUnitTypeTable(NS.UNIT_TYPES.FRIENDLY_NPC)
+        local enemyNpcDB = NS.Config and NS.Config.GetTable and NS.Config.GetTable(NS.UNIT_TYPES.ENEMY_NPC)
+        local friendlyNpcDB = NS.Config and NS.Config.GetTable and NS.Config.GetTable(NS.UNIT_TYPES.FRIENDLY_NPC)
 
         local c
         if enemyNpcDB and db == enemyNpcDB then
@@ -198,7 +363,7 @@ local function ComputeDesiredColor(frame, unit, db)
             c = db.healthColor
         end
 
-        c = c or {r=1, g=1, b=1}
+        if not c then return 1, 1, 1 end
         return c.r, c.g, c.b
     end
 
@@ -207,12 +372,14 @@ local function ComputeDesiredColor(frame, unit, db)
     local st = GetState(frame)
     if st.lastUnit ~= unit then
         st.lastUnit = unit
-        st.lastColorKey = nil
+        st.lastColorR = nil
+    st.lastColorG = nil
+    st.lastColorB = nil
         st.combatRedUntil = 0
     end
 
     local isFriend = UnitIsFriend("player", unit)
-    local isPlayer = UnitIsPlayer(unit)
+    local isPlayer = UnitIsPlayer(unit) or (UnitTreatAsPlayerForDisplay and UnitTreatAsPlayerForDisplay(unit))
 
     -- -- Логика УГРОЗЫ (только для врагов и если это не игрок-игрок PVP, хотя в PVP угрозы нет)
     -- Если ты хочешь отключить покраснение при агро, закомментируй блок ниже
@@ -279,12 +446,11 @@ local function ApplyHealthColor(frame, unit, db)
     local r, g, b = ComputeDesiredColor(frame, unit, db)
     if not r then return end
 
-    local key = string.format("%.3f|%.3f|%.3f", r, g, b)
     local cr, cg, cb = hb:GetStatusBarColor()
 
-    if st.lastColorKey ~= key or ColorDiff(cr, cg, cb, r, g, b) then
+    if st.lastColorR ~= r or st.lastColorG ~= g or st.lastColorB ~= b or ColorDiff(cr, cg, cb, r, g, b) then
         hb:SetStatusBarColor(r, g, b)
-        st.lastColorKey = key
+        st.lastColorR, st.lastColorG, st.lastColorB = r, g, b
     end
 end
 
@@ -299,8 +465,7 @@ local function ApplyGeometry(frame, db, st)
     if w < 40 then w = 40 elseif w > 400 then w = 400 end
     if h < 2 then h = 2 elseif h > 60 then h = 60 end
 
-    local geomKey = w .. "|" .. h
-    if st.geomKey ~= geomKey then
+    if st.lastW ~= w or st.lastH ~= h then
         local container = frame.HealthBarsContainer or frame
 
         hb:ClearAllPoints()
@@ -312,7 +477,7 @@ local function ApplyGeometry(frame, db, st)
             frame.selectionHighlight:SetAllPoints(hb)
         end
 
-        st.geomKey = geomKey
+        st.lastW, st.lastH = w, h
         st.applied = true
     end
 
@@ -451,6 +616,18 @@ NS.Modules.HpBar = {
         
         -- Вызываем вашу родную функцию очистки геометрии
         DisableCleanup(frame, st)
+
+        -- Сбрасываем кеш визуальных регионов/детей (nameplates могут переиспользоваться)
+        st._hbVisualCacheBuilt = false
+        st._hbVisualCacheHb = nil
+        if st._hbVisualRegions then _wipe(st._hbVisualRegions) end
+        if st._hbVisualChildren then _wipe(st._hbVisualChildren) end
+        if st._hbVisualExtra then _wipe(st._hbVisualExtra) end
+        if st._hbChildVisualRegions then
+            for k in pairs(st._hbChildVisualRegions) do
+                st._hbChildVisualRegions[k] = nil
+            end
+        end
         
         -- Передаем управление цветом обратно движку Blizzard
         if _G.CompactUnitFrame_UpdateHealthColor and frame.unit then

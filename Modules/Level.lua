@@ -14,8 +14,13 @@ local function GetState(frame)
         lastFontFlag = nil,
         lastShadow = nil,
         lastText = nil,
-        lastColorKey = nil,
-        lastPosKey = nil,
+        lastLevel = nil,
+        lastColorR = nil,
+        lastColorG = nil,
+        lastColorB = nil,
+        lastSide = nil,
+        lastX = nil,
+        lastY = nil,
         lastJustify = nil,
     }
     State[frame] = st
@@ -29,9 +34,6 @@ local function GetMyLevelText(frame)
     return frame.BPF_LevelText
 end
 
-local function ColorKey(r, g, b)
-    return string.format("%.3f|%.3f|%.3f", r or 1, g or 1, b or 1)
-end
 
 local function UpdateLevel(frame, unit, db, gdb)
     if not frame or frame:IsForbidden() then return end
@@ -101,41 +103,40 @@ local function UpdateLevel(frame, unit, db, gdb)
             levelText:SetText("??")
             st.lastText = "??"
         end
-        local ck = ColorKey(1, 0, 0)
-        if st.lastColorKey ~= ck then
-            levelText:SetTextColor(1, 0, 0)
-            st.lastColorKey = ck
+        st.lastLevel = nil
+        local r, g, b = 1, 0, 0
+        if st.lastColorR ~= r or st.lastColorG ~= g or st.lastColorB ~= b then
+            levelText:SetTextColor(r, g, b)
+            st.lastColorR, st.lastColorG, st.lastColorB = r, g, b
         end
     else
-        local txt = tostring(level)
-        if st.lastText ~= txt then
-            levelText:SetText(txt)
-            st.lastText = txt
+        if st.lastLevel ~= level then
+            st.lastLevel = level
+            st.lastText = tostring(level)
+            levelText:SetText(st.lastText)
         end
         
         -- Логика цвета
         local r, g, b
         if db.levelColorMode == 2 then
-            local c = db.levelColor or {r=1, g=1, b=1}
-            r, g, b = c.r, c.g, c.b
+            local c = db.levelColor
+            r = (c and c.r) or 1
+            g = (c and c.g) or 1
+            b = (c and c.b) or 1
         else
             local c = GetQuestDifficultyColor(level)
             r, g, b = c.r, c.g, c.b
         end
-
-        local ck = ColorKey(r, g, b)
-        if st.lastColorKey ~= ck then
+        if st.lastColorR ~= r or st.lastColorG ~= g or st.lastColorB ~= b then
             levelText:SetTextColor(r, g, b)
-            st.lastColorKey = ck
+            st.lastColorR, st.lastColorG, st.lastColorB = r, g, b
         end
     end
 
     local side = db.levelAnchor or "LEFT"
     local offX = db.levelX or 0
     local offY = db.levelY or 0
-
-    local posKey = side .. "|" .. offX .. "|" .. offY
-    if st.lastPosKey ~= posKey then
+    if st.lastSide ~= side or st.lastX ~= offX or st.lastY ~= offY then
         levelText:ClearAllPoints()
         if side == "LEFT" then
             levelText:SetPoint("RIGHT", frame.healthBar, "LEFT", offX - 5, offY)
@@ -146,7 +147,7 @@ local function UpdateLevel(frame, unit, db, gdb)
             levelText:SetJustifyH("LEFT")
             st.lastJustify = "LEFT"
         end
-        st.lastPosKey = posKey
+        st.lastSide, st.lastX, st.lastY = side, offX, offY
     end
 
     if st.lastVisible ~= true then
@@ -166,5 +167,6 @@ NS.Modules.Level = {
         end
         st.lastVisible = false
         st.lastText = nil
+        st.lastLevel = nil
     end
 }

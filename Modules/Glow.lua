@@ -2,9 +2,15 @@ local _, NS = ...
 
 local LastHighlightedFrame = nil
 
+local DEFAULT_R, DEFAULT_G, DEFAULT_B = 1, 1, 1
+local DEFAULT_A = 0.5
+
 local function HideGlow(frame)
     if frame and frame.BPF_MouseoverGlow then
-        frame.BPF_MouseoverGlow:Hide()
+        if frame.BPF_MouseoverGlowShown then
+            frame.BPF_MouseoverGlow:Hide()
+            frame.BPF_MouseoverGlowShown = false
+        end
     end
 end
 
@@ -24,9 +30,21 @@ local function ShowGlow(frame, db)
         frame.BPF_MouseoverGlow:SetBlendMode("ADD")
     end
 
-    local c = db.mouseoverGlowColor or {r=1, g=1, b=1}
-    frame.BPF_MouseoverGlow:SetVertexColor(c.r, c.g, c.b, db.mouseoverGlowAlpha or 0.5)
-    frame.BPF_MouseoverGlow:Show()
+    local c = db.mouseoverGlowColor
+    local r = (c and c.r) or DEFAULT_R
+    local g = (c and c.g) or DEFAULT_G
+    local b = (c and c.b) or DEFAULT_B
+    local a = db.mouseoverGlowAlpha or DEFAULT_A
+
+    if frame.BPF_MouseoverGlowR ~= r or frame.BPF_MouseoverGlowG ~= g or frame.BPF_MouseoverGlowB ~= b or frame.BPF_MouseoverGlowA ~= a then
+        frame.BPF_MouseoverGlow:SetVertexColor(r, g, b, a)
+        frame.BPF_MouseoverGlowR, frame.BPF_MouseoverGlowG, frame.BPF_MouseoverGlowB, frame.BPF_MouseoverGlowA = r, g, b, a
+    end
+
+    if not frame.BPF_MouseoverGlowShown then
+        frame.BPF_MouseoverGlow:Show()
+        frame.BPF_MouseoverGlowShown = true
+    end
 end
 
 function NS.UpdateMouseoverGlow()
@@ -81,6 +99,12 @@ NS.Modules.Glow = {
     end,
     Reset = function(frame)
         HideGlow(frame)
+
+        frame.BPF_MouseoverGlowR = nil
+        frame.BPF_MouseoverGlowG = nil
+        frame.BPF_MouseoverGlowB = nil
+        frame.BPF_MouseoverGlowA = nil
+        frame.BPF_MouseoverGlowShown = false
         
         -- Очищаем кэш, чтобы избежать утечек при пулинге фреймов
         if LastHighlightedFrame == frame then

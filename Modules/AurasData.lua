@@ -14,6 +14,8 @@ local _, NS = ...
 
 NS.AurasData = NS.AurasData or {}
 
+local wipe_tbl = wipe or (table and table.wipe)
+
 local State = setmetatable({}, { __mode = "k" })
 
 local function GetState(frame)
@@ -36,7 +38,11 @@ end
 
 local function ResetState(st)
     st.unit = nil
-    st.auraData = {}
+    if wipe_tbl and st.auraData then
+        wipe_tbl(st.auraData)
+    else
+        st.auraData = {}
+    end
     st.helpfulIDs = nil
     st.harmfulIDs = nil
     st.ccIDs = nil
@@ -85,7 +91,11 @@ function NS.AurasData.ApplyRefresh(frame, unit, refreshData)
     end
 
     if refreshData.isFullUpdate then
-        st.auraData = {}
+        if wipe_tbl and st.auraData then
+            wipe_tbl(st.auraData)
+        else
+            st.auraData = {}
+        end
         st.dirty = true
         st.hasFull = false
         return true, true
@@ -145,7 +155,11 @@ function NS.AurasData.FullRefresh(frame, unit)
         st.unit = unit
     end
 
-    st.auraData = {}
+    if wipe_tbl and st.auraData then
+        wipe_tbl(st.auraData)
+    else
+        st.auraData = {}
+    end
 
     if not (C_UnitAuras and C_UnitAuras.GetUnitAuras) then
         st.dirty = true
@@ -246,6 +260,3 @@ function NS.AurasData.GetAura(frame, unit, auraInstanceID)
     return nil
 end
 
-function NS.AurasData.GetState(frame)
-    return GetState(frame)
-end

@@ -3,8 +3,8 @@ local _, NS = ...
 -- =============================================================
 -- PROFILES: character-bound profile selection + management
 -- SavedVariables layout:
--- BlizzPlatesFixDB.profileKeys[charKey] = "ProfileName"
--- BlizzPlatesFixDB.profiles["ProfileName"] = { Global = {...}, Units = {...} }
+--   BlizzPlatesFixDB.profileKeys[charKey] = "ProfileName"
+--   BlizzPlatesFixDB.profiles["ProfileName"] = { Global = {...}, Units = {...} }
 -- BlizzPlatesFixDB.Global / BlizzPlatesFixDB.Units are maintained as aliases to the active profile for backward compatibility.
 -- =============================================================
 

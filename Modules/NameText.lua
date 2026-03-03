@@ -3,6 +3,29 @@ local _, NS = ...
 local STANDARD_TEXT_FONT = _G.STANDARD_TEXT_FONT
 local FrameState = setmetatable({}, { __mode = "k" })
 
+-- Cache references to NPC unit-type DB tables to avoid repeated NS.Config.GetTable calls
+-- in hot paths (GetUnitColor is called very frequently).
+local _cachedProfileName = nil
+local _cachedEnemyNpcDB = nil
+local _cachedFriendlyNpcDB = nil
+
+local function RefreshNpcProfileRefs()
+    local cfg = NS.Config
+    if not cfg or type(cfg.GetTable) ~= "function" then
+        _cachedProfileName = nil
+        _cachedEnemyNpcDB = nil
+        _cachedFriendlyNpcDB = nil
+        return
+    end
+
+    local prof = (type(cfg.GetActiveProfileName) == "function") and cfg.GetActiveProfileName() or nil
+    if prof ~= _cachedProfileName or _cachedEnemyNpcDB == nil or _cachedFriendlyNpcDB == nil then
+        _cachedProfileName = prof
+        _cachedEnemyNpcDB = cfg.GetTable(NS.UNIT_TYPES.ENEMY_NPC)
+        _cachedFriendlyNpcDB = cfg.GetTable(NS.UNIT_TYPES.FRIENDLY_NPC)
+    end
+end
+
 local function GetState(frame)
     local st = FrameState[frame]
     if st then return st end
@@ -19,7 +42,9 @@ local function GetState(frame)
         lastWrap = nil,
         lastTruncate = nil,
         lastWidth = nil,
-        lastPointKey = nil,
+        lastPointAlignH = nil,
+        lastPointX = nil,
+        lastPointY = nil,
         lastFsAnchorKey = nil,
         lastColorR = nil,
         lastColorG = nil,
@@ -51,20 +76,6 @@ local function EnsureFontString(frame, st)
     st.fs:SetSpacing(0)
 end
 
-
-local function IsSimplifiedNotTarget(frame, unit)
-    if frame and frame.IsSimplified and frame:IsSimplified() then
-        if frame.IsTarget and frame:IsTarget() then
-            return false
-        end
-        if unit and UnitIsUnit and UnitIsUnit(unit, "target") then
-            return false
-        end
-        return true
-    end
-    return false
-end
-
 local function SafeUnitNameString(unit)
     local v = UnitName(unit)
     if v == nil then return "" end
@@ -75,18 +86,19 @@ end
 
 local function GetUnitColor(unit, db)
     if db.nameColorMode == 2 then
-        local enemyNpcDB = NS.Config and NS.Config.GetUnitTypeTable and NS.Config.GetUnitTypeTable(NS.UNIT_TYPES.ENEMY_NPC)
-        local friendlyNpcDB = NS.Config and NS.Config.GetUnitTypeTable and NS.Config.GetUnitTypeTable(NS.UNIT_TYPES.FRIENDLY_NPC)
+        if _cachedEnemyNpcDB == nil or _cachedFriendlyNpcDB == nil then
+            RefreshNpcProfileRefs()
+        end
 
         local c
-        if enemyNpcDB and db == enemyNpcDB then
+        if _cachedEnemyNpcDB and db == _cachedEnemyNpcDB then
             local reaction = UnitReaction(unit, "player")
             if reaction == 4 then
                 c = db.nameColorNeutral or db.nameColor
             else
                 c = db.nameColorHostile or db.nameColor
             end
-        elseif friendlyNpcDB and db == friendlyNpcDB then
+        elseif _cachedFriendlyNpcDB and db == _cachedFriendlyNpcDB then
             local reaction = UnitReaction(unit, "player")
             if reaction == 4 then
                 c = db.nameColorNeutral or db.nameColor
@@ -97,7 +109,7 @@ local function GetUnitColor(unit, db)
             c = db.nameColor
         end
 
-        c = c or {r=1, g=1, b=1}
+        if not c then return 1, 1, 1 end
         return c.r, c.g, c.b
     end
 
@@ -114,7 +126,7 @@ local function GetUnitColor(unit, db)
     end
 
     -- Mode 1: Авто (игроки: класс, NPC: реакция)
-    if UnitIsPlayer(unit) then
+    if UnitIsPlayer(unit) or (UnitTreatAsPlayerForDisplay and UnitTreatAsPlayerForDisplay(unit)) then
         local _, classFilename = UnitClass(unit)
         if classFilename then
             local color = C_ClassColor.GetClassColor(classFilename)
@@ -177,13 +189,6 @@ local function SetBlizzBlocked(frame, blocked)
     end
 end
 
-local function IsBlizzNameShown(frame)
-    local blizzName = frame.name or (frame.UnitFrame and frame.UnitFrame.name)
-    if blizzName and not blizzName:IsShown() then
-        return false
-    end
-    return true
-end
 
 local function ApplyStyle(frame, st, unit, db, gdb)
     EnsureBlizzNameHooks(frame, st)
@@ -193,11 +198,13 @@ local function ApplyStyle(frame, st, unit, db, gdb)
         if st.wrapper then st.wrapper:Hide() end
         SetBlizzBlocked(frame, false)
         st.lastShown = nil
-        st.lastPointKey = nil
+        st.lastPointAlignH = nil
+        st.lastPointX = nil
+        st.lastPointY = nil
         return
     end
 
-    if IsSimplifiedNotTarget(frame, unit) then
+    if NS.IsSimplifiedNotTarget(frame, unit) then
         if st.fs then st.fs:Hide() end
         if st.wrapper then st.wrapper:Hide() end
         SetBlizzBlocked(frame, true)
@@ -273,9 +280,8 @@ local function ApplyStyle(frame, st, unit, db, gdb)
         st.lastAlignV = alignV
     end
 
-    local pointKey = alignH .. ":" .. offX .. ":" .. offY
     local anchor = frame.healthBar
-    if st.lastPointKey ~= pointKey and st.wrapper then
+    if st.wrapper and (st.lastPointAlignH ~= alignH or st.lastPointX ~= offX or st.lastPointY ~= offY) then
         st.wrapper:ClearAllPoints()
         if alignH == "LEFT" then
             st.wrapper:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", offX, offY)
@@ -284,8 +290,11 @@ local function ApplyStyle(frame, st, unit, db, gdb)
         else
             st.wrapper:SetPoint("BOTTOM", anchor, "TOP", offX, offY)
         end
-        st.lastPointKey = pointKey
+        st.lastPointAlignH = alignH
+        st.lastPointX = offX
+        st.lastPointY = offY
     end
+
 
     if st.wrapper and st.lastFsAnchorKey ~= alignH then
         fs:ClearAllPoints()
@@ -334,6 +343,9 @@ NS.Modules.NameText = {
         if not frame.healthBar then return end
         if not db then return end
 
+        -- Keep cached NPC DB table references in sync with profile changes.
+        RefreshNpcProfileRefs()
+
         local st = GetState(frame)
         ApplyStyle(frame, st, unit, db, gdb)
     end,
@@ -343,6 +355,8 @@ NS.Modules.NameText = {
         if st.wrapper then st.wrapper:Hide() end
         SetBlizzBlocked(frame, false)
         st.lastShown = nil
-        st.lastPointKey = nil
+        st.lastPointAlignH = nil
+        st.lastPointX = nil
+        st.lastPointY = nil
     end
 }

@@ -54,6 +54,9 @@ end
 --
 -- We avoid spellId/sourceUnit checks (can be secret/tainted in 12.0+). Instead
 -- we intersect by auraInstanceID with Blizzard's own AurasFrame lists.
+local _BPF_SharedBlizzardAuraSet = {}
+local _BPF_SharedNameplateOnlyAuraSet = {}
+
 local function BuildBlizzardNameplateAuraSet(frame, kind)
     local af = frame and frame.AurasFrame
     if not af then return nil end
@@ -66,12 +69,12 @@ local function BuildBlizzardNameplateAuraSet(frame, kind)
     end
     if not list or type(list.Iterate) ~= "function" then return nil end
 
-    local set = {}
+    wipe(_BPF_SharedBlizzardAuraSet)
     local ok = pcall(list.Iterate, list, function(auraInstanceID)
-        if auraInstanceID then set[auraInstanceID] = true end
+        if auraInstanceID then _BPF_SharedBlizzardAuraSet[auraInstanceID] = true end
     end)
     if ok then
-        return set
+        return _BPF_SharedBlizzardAuraSet
     end
     return nil
 end
@@ -80,11 +83,11 @@ local function BuildNameplateOnlyAuraSet(unit, filter)
     if not (C_UnitAuras and C_UnitAuras.GetUnitAuraInstanceIDs) then return nil end
     local ids = C_UnitAuras.GetUnitAuraInstanceIDs(unit, filter)
     if not ids then return nil end
-    local set = {}
+    wipe(_BPF_SharedNameplateOnlyAuraSet)
     for _, auraInstanceID in ipairs(ids) do
-        set[auraInstanceID] = true
+        _BPF_SharedNameplateOnlyAuraSet[auraInstanceID] = true
     end
-    return set
+    return _BPF_SharedNameplateOnlyAuraSet
 end
 
 -- ============================================================================
@@ -137,34 +140,18 @@ local function ApplyIconRect(icon, width, height)
     end
 end
 
-local function ApplyAuraTextStyle(icon, db, gdb, auraType)
-    if not icon or not db then return end
-
-    local prefix
-    if auraType == "BUFF" then
-        prefix = "buffs"
-    elseif auraType == "DEBUFF" then
-        prefix = "debuffs"
-    else
-        prefix = "cc"
-    end
-
-    local fontPath = NS.GetFontPath(gdb and gdb.globalFont)
+local function ApplyAuraTextStyle(icon, fontPath, timeSize, timeX, timeY, timeColor, stackSize, stackX, stackY, stackColor)
+    if not icon then return end
 
     -- Таймер: используем встроенные цифры Cooldown (без математики с secret values)
     local cdText = GetCooldownFontString(icon.cd)
     if cdText then
-        local size = db[prefix.."TimeFontSize"] or 12
-        local x = db[prefix.."TimeX"] or 0
-        local y = db[prefix.."TimeY"] or 0
-        local c = db[prefix.."TimeColor"]
-
         local _, _, flags = cdText:GetFont()
-        cdText:SetFont(fontPath, size, flags)
+        cdText:SetFont(fontPath, timeSize, flags)
         cdText:ClearAllPoints()
-        cdText:SetPoint("CENTER", icon.cd, "CENTER", x, y)
-        if type(c) == "table" then
-            cdText:SetTextColor(c.r or 1, c.g or 1, c.b or 1, c.a or 1)
+        cdText:SetPoint("CENTER", icon.cd, "CENTER", timeX, timeY)
+        if type(timeColor) == "table" then
+            cdText:SetTextColor(timeColor.r or 1, timeColor.g or 1, timeColor.b or 1, timeColor.a or 1)
         else
             cdText:SetTextColor(1, 1, 1, 1)
         end
@@ -172,17 +159,12 @@ local function ApplyAuraTextStyle(icon, db, gdb, auraType)
 
     -- Стаки
     if icon.count then
-        local size = db[prefix.."StackFontSize"] or 10
-        local x = db[prefix.."StackX"] or 2
-        local y = db[prefix.."StackY"] or -2
-        local c = db[prefix.."StackColor"]
-
         local _, _, flags = icon.count:GetFont()
-        icon.count:SetFont(fontPath, size, flags)
+        icon.count:SetFont(fontPath, stackSize, flags)
         icon.count:ClearAllPoints()
-        icon.count:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", x, y)
-        if type(c) == "table" then
-            icon.count:SetTextColor(c.r or 1, c.g or 1, c.b or 1, c.a or 1)
+        icon.count:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", stackX, stackY)
+        if type(stackColor) == "table" then
+            icon.count:SetTextColor(stackColor.r or 1, stackColor.g or 1, stackColor.b or 1, stackColor.a or 1)
         else
             icon.count:SetTextColor(1, 1, 1, 1)
         end
@@ -192,23 +174,67 @@ end
 -- =========================================================================
 -- 1.6. ICON BORDER + DISPEL GLOW
 -- =========================================================================
-local function _GetAuraPrefix(auraType)
-    if auraType == "BUFF" then return "buffs" end
-    if auraType == "DEBUFF" then return "debuffs" end
-    return "cc"
+local AURA_STYLE_KEYS = {
+    BUFF = {
+        timeFontSize = "buffsTimeFontSize",
+        timeX = "buffsTimeX",
+        timeY = "buffsTimeY",
+        timeColor = "buffsTimeColor",
+
+        stackFontSize = "buffsStackFontSize",
+        stackX = "buffsStackX",
+        stackY = "buffsStackY",
+        stackColor = "buffsStackColor",
+
+        borderEnable = "buffsBorderEnable",
+        borderThickness = "buffsBorderThickness",
+        borderColor = "buffsBorderColor",
+    },
+    DEBUFF = {
+        timeFontSize = "debuffsTimeFontSize",
+        timeX = "debuffsTimeX",
+        timeY = "debuffsTimeY",
+        timeColor = "debuffsTimeColor",
+
+        stackFontSize = "debuffsStackFontSize",
+        stackX = "debuffsStackX",
+        stackY = "debuffsStackY",
+        stackColor = "debuffsStackColor",
+
+        borderEnable = "debuffsBorderEnable",
+        borderThickness = "debuffsBorderThickness",
+        borderColor = "debuffsBorderColor",
+    },
+    CC = {
+        timeFontSize = "ccTimeFontSize",
+        timeX = "ccTimeX",
+        timeY = "ccTimeY",
+        timeColor = "ccTimeColor",
+
+        stackFontSize = "ccStackFontSize",
+        stackX = "ccStackX",
+        stackY = "ccStackY",
+        stackColor = "ccStackColor",
+
+        borderEnable = "ccBorderEnable",
+        borderThickness = "ccBorderThickness",
+        borderColor = "ccBorderColor",
+    },
+}
+
+local function GetAuraStyleKeys(auraType)
+    return AURA_STYLE_KEYS[auraType] or AURA_STYLE_KEYS.CC
 end
 
-local function ApplyAuraBorderStyle(icon, db, auraType)
-    if not icon or not icon.border or not db then return end
+local function ApplyAuraBorderStyle(icon, borderEnabled, thickness, borderColor)
+    if not icon or not icon.border then return end
 
-    local prefix = _GetAuraPrefix(auraType)
-    local enabled = db[prefix.."BorderEnable"]
-    if enabled == false then
+    if borderEnabled == false then
         icon.border:Hide()
         return
     end
 
-    local thickness = tonumber(db[prefix.."BorderThickness"]) or 2
+    thickness = tonumber(thickness) or 2
     if thickness < 0 then thickness = 0 end
 
     -- IMPORTANT: border uses a solid-color texture. If its base color is black,
@@ -222,9 +248,8 @@ local function ApplyAuraBorderStyle(icon, db, auraType)
     icon.border:SetPoint("TOPLEFT", icon, "TOPLEFT", -thickness, thickness)
     icon.border:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", thickness, -thickness)
 
-    local c = db[prefix.."BorderColor"]
-    if type(c) == "table" then
-        icon.border:SetVertexColor(c.r or 0, c.g or 0, c.b or 0, c.a or 1)
+    if type(borderColor) == "table" then
+        icon.border:SetVertexColor(borderColor.r or 0, borderColor.g or 0, borderColor.b or 0, borderColor.a or 1)
     else
         icon.border:SetVertexColor(0, 0, 0, 1)
     end
@@ -253,7 +278,6 @@ local function SetDispelGlow(icon, enabled)
     if not icon.DispelGlow then return end
     icon.DispelGlow:SetShown(enabled and true or false)
 end
-
 
 -- ============================================================================
 -- 2. SETUP (Иконки) - Твой оригинальный код (БЕЗ ИЗМЕНЕНИЙ)
@@ -423,7 +447,6 @@ local function ProcessAuraCategory(frame, unit, db, gdb, auraType, ignoreMap)
     else -- CC
         usePandemic = (db.ccPandemic ~= false)
     end
-    local alphaIfEternal = 1
 	local maxAuras = 8
 
 
@@ -448,7 +471,23 @@ local function ProcessAuraCategory(frame, unit, db, gdb, auraType, ignoreMap)
 			end
 		end
 	end
-	local activeCount = 0
+	local activeCount = 0-- Per-category styling (avoid per-update string concatenations)
+local keys = GetAuraStyleKeys(auraType)
+local fontPath = NS.GetFontPath(gdb and gdb.globalFont)
+
+local timeFontSize = db[keys.timeFontSize] or 12
+local timeX = db[keys.timeX] or 0
+local timeY = db[keys.timeY] or 0
+local timeColor = db[keys.timeColor]
+
+local stackFontSize = db[keys.stackFontSize] or 10
+local stackX = db[keys.stackX] or 2
+local stackY = db[keys.stackY] or -2
+local stackColor = db[keys.stackColor]
+
+local borderEnabled = db[keys.borderEnable]
+local borderThickness = db[keys.borderThickness]
+local borderColor = db[keys.borderColor]
 
     -- 1. Сначала применяем данные ко всем валидным аурам
     for _, auraInstanceID in ipairs(ids) do
@@ -525,10 +564,10 @@ local function ProcessAuraCategory(frame, unit, db, gdb, auraType, ignoreMap)
                 activeCount = activeCount + 1
                 local icon = GetIcon(frame, pool, activeCount)
 
-                ApplyAuraTextStyle(icon, db, gdb, auraType)
+                ApplyAuraTextStyle(icon, fontPath, timeFontSize, timeX, timeY, timeColor, stackFontSize, stackX, stackY, stackColor)
 
                 ApplyIconRect(icon, size, iconH or size)
-                ApplyAuraBorderStyle(icon, db, auraType)
+                ApplyAuraBorderStyle(icon, borderEnabled, borderThickness, borderColor)
                 icon.tex:SetTexture(aura.icon)
 
                                 if stacksEnable == false then
@@ -697,10 +736,10 @@ local function RenderPreviewCategory(frame, db, gdb, auraType, list)
         activeCount = activeCount + 1
         local icon = GetIcon(frame, pool, activeCount)
 
-        ApplyAuraTextStyle(icon, db, gdb, auraType)
+        ApplyAuraTextStyle(icon, fontPath, timeFontSize, timeX, timeY, timeColor, stackFontSize, stackX, stackY, stackColor)
 
         ApplyIconRect(icon, size, iconH or size)
-        ApplyAuraBorderStyle(icon, db, auraType)
+        ApplyAuraBorderStyle(icon, borderEnabled, borderThickness, borderColor)
         SetDispelGlow(icon, false)
         icon.tex:SetTexture(a.icon)
 
