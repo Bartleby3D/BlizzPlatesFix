@@ -1,5 +1,4 @@
-local AddonName, NS = ...
-
+local _, NS = ...
 local LSM = LibStub("LibSharedMedia-3.0")
 local STANDARD_TEXT_FONT = _G.STANDARD_TEXT_FONT
 
@@ -72,8 +71,6 @@ end
 
 
 local UnitConfigCache = {}
-local UNITCONFIG_TTL = 0.25
-
 function NS.ClearUnitConfigCache(unit)
     if unit then
         UnitConfigCache[unit] = nil
@@ -82,9 +79,17 @@ function NS.ClearUnitConfigCache(unit)
     for k in pairs(UnitConfigCache) do UnitConfigCache[k] = nil end
 end
 
--- ГЛАВНАЯ НОВАЯ ФУНКЦИЯ: Определение типа конфига для юнита
 function NS.GetUnitConfig(unit)
     if not unit then return nil, nil end
+
+    -- Nameplate unit tokens (nameplate1, nameplate2, ...) can be reused and
+    -- may get rebound to a different GUID without a clean lifecycle in edge cases.
+    -- Cache must therefore be validated against UnitGUID.
+    local guid = UnitGUID(unit)
+    local cached = UnitConfigCache[unit]
+    if cached and cached.guid and guid and cached.guid == guid then
+        return cached.udb, cached.gdb
+    end
     
     local unitType
     if UnitIsPlayer(unit) then
@@ -113,6 +118,13 @@ function NS.GetUnitConfig(unit)
     local udb = NS.Config and NS.Config.GetTable and NS.Config.GetTable(unitType)
     local gdb = NS.Config and NS.Config.GetTable and NS.Config.GetTable("Global")
     
+    -- If guid is unavailable, do not persist a potentially unsafe cache entry.
+    if guid then
+        UnitConfigCache[unit] = { guid = guid, udb = udb, gdb = gdb }
+    else
+        UnitConfigCache[unit] = nil
+    end
+    
     return udb, gdb
 end
 
@@ -133,5 +145,19 @@ function NS.IsEnemyBuffPurgeable(aura)
         return true
     end
 
+    return false
+end
+
+-- Returns true if the plate is in simplified mode and is NOT the current target.
+function NS.IsSimplifiedNotTarget(frame, unit)
+    if frame and frame.IsSimplified and frame:IsSimplified() then
+        if frame.IsTarget and frame:IsTarget() then
+            return false
+        end
+        if unit and UnitIsUnit and UnitIsUnit(unit, "target") then
+            return false
+        end
+        return true
+    end
     return false
 end
