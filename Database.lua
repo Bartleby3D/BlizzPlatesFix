@@ -1,4 +1,4 @@
-local AddonName, NS = ...
+local _, NS = ...
 NS.DB = NS.DB or {}
 
 -- Типы профилей (константы для удобства)
@@ -36,6 +36,7 @@ NS.DB.globalDefaults = {
     transparencyEnabled = false,
     transparencyMode = 1,
     transparencyAlpha = 0.5,
+    transparencyRange = 40, -- yards
 
     -- Иконки (глобальные правила фильтрации)
     classifEnabled = true,
@@ -194,10 +195,10 @@ NS.DB.unitDefaults = {
     buffsPurgeGlow = false,
     -- Dropdown aura filters (single choice)
     -- Friendly IMPORTANT uses Blizzard RAID filters; Enemy IMPORTANT uses Blizzard nameplate-only list.
-    buffsFriendlyFilterMode = "ALL", -- ALL|MINE|MINE_IMPORTANT|IMPORTANT
-    debuffsFriendlyFilterMode = "ALL", -- ALL|IMPORTANT|DISPEL|IMPORTANT_AND_DISPEL|IMPORTANT_OR_DISPEL
-    buffsEnemyFilterMode = "ALL", -- ALL|IMPORTANT|PURGE|IMPORTANT_AND_PURGE|IMPORTANT_OR_PURGE
-    debuffsEnemyFilterMode = "ALL", -- ALL|IMPORTANT|MINE|MINE_AND_IMPORTANT
+    buffsFriendlyFilterMode = "IMPORTANT", -- ALL|MINE|MINE_IMPORTANT|IMPORTANT
+    debuffsFriendlyFilterMode = "IMPORTANT", -- ALL|IMPORTANT|DISPEL|IMPORTANT_AND_DISPEL|IMPORTANT_OR_DISPEL
+    buffsEnemyFilterMode = "IMPORTANT", -- ALL|IMPORTANT|PURGE|IMPORTANT_AND_PURGE|IMPORTANT_OR_PURGE
+    debuffsEnemyFilterMode = "MINE", -- ALL|IMPORTANT|MINE|MINE_AND_IMPORTANT
 
 
     
@@ -367,6 +368,38 @@ NS.DB.CopySectionRules = {
     },
 }
 
+-- Динамические исключения для аур: чтобы при копировании между Friendly/Enemy
+-- не перетирать настройки, которые актуальны только для одной стороны.
+local function BuildDynIgnore(sectionKey, toType)
+    if sectionKey == "BUFFS" then
+        local dynIgnore = { buffsPreview = true } -- настройки превью не копируем
+        if (toType == NS.UNIT_TYPES.ENEMY_PLAYER) or (toType == NS.UNIT_TYPES.ENEMY_NPC) then
+            -- копируем BUFFS в ENEMY: не трогаем friendly-mode
+            dynIgnore.buffsFriendlyFilterMode = true
+        else
+            -- копируем BUFFS в FRIENDLY: не трогаем enemy-mode и enemy-only опции
+            dynIgnore.buffsEnemyFilterMode = true
+            dynIgnore.buffsPurgeGlow = true
+        end
+        return dynIgnore
+    elseif sectionKey == "DEBUFFS" then
+        local dynIgnore = { debuffsPreview = true } -- настройки превью не копируем
+        if (toType == NS.UNIT_TYPES.ENEMY_PLAYER) or (toType == NS.UNIT_TYPES.ENEMY_NPC) then
+            -- копируем DEBUFFS в ENEMY: не трогаем friendly-mode и friendly-only опции
+            dynIgnore.debuffsFriendlyFilterMode = true
+            dynIgnore.debuffsDispelGlow = true
+        else
+            -- копируем DEBUFFS в FRIENDLY: не трогаем enemy-mode
+            dynIgnore.debuffsEnemyFilterMode = true
+        end
+        return dynIgnore
+    elseif sectionKey == "CC" then
+        return { ccPreview = true } -- настройки превью не копируем
+    end
+
+    return nil
+end
+
 -- Копирует выбранный раздел из одного типа существа в другой.
 -- sectionKey: "HPBAR"|"NAME"|"HPTEXT"|"LEVEL"|"TARGET"|"CASTBAR"|"BUFFS"|"DEBUFFS"|"CC"
 function NS.DB.CopySection(fromType, toType, sectionKey)
@@ -379,32 +412,7 @@ function NS.DB.CopySection(fromType, toType, sectionKey)
     local rule = NS.DB.CopySectionRules and NS.DB.CopySectionRules[sectionKey]
     if not rule then return false, "bad_section" end
 
-    -- Динамические исключения для аур: чтобы при копировании между Friendly/Enemy
-    -- не перетирать настройки, которые актуальны только для одной стороны.
-    local dynIgnore = nil
-    if sectionKey == "BUFFS" then
-        dynIgnore = { buffsPreview = true } -- настройки превью не копируем
-        if (toType == NS.UNIT_TYPES.ENEMY_PLAYER) or (toType == NS.UNIT_TYPES.ENEMY_NPC) then
-            -- копируем BUFFS в ENEMY: не трогаем friendly-mode
-            dynIgnore.buffsFriendlyFilterMode = true
-        else
-            -- копируем BUFFS в FRIENDLY: не трогаем enemy-mode и enemy-only опции
-            dynIgnore.buffsEnemyFilterMode = true
-            dynIgnore.buffsPurgeGlow = true
-        end
-    elseif sectionKey == "DEBUFFS" then
-        dynIgnore = { debuffsPreview = true } -- настройки превью не копируем
-        if (toType == NS.UNIT_TYPES.ENEMY_PLAYER) or (toType == NS.UNIT_TYPES.ENEMY_NPC) then
-            -- копируем DEBUFFS в ENEMY: не трогаем friendly-mode и friendly-only опции
-            dynIgnore.debuffsFriendlyFilterMode = true
-            dynIgnore.debuffsDispelGlow = true
-        else
-            -- копируем DEBUFFS в FRIENDLY: не трогаем enemy-mode
-            dynIgnore.debuffsEnemyFilterMode = true
-        end
-    elseif sectionKey == "CC" then
-        dynIgnore = { ccPreview = true } -- настройки превью не копируем
-    end
+    local dynIgnore = BuildDynIgnore(sectionKey, toType)
 
     if rule.mode == "keys" and rule.keys then
         for _, k in ipairs(rule.keys) do
@@ -451,26 +459,7 @@ function NS.DB.CopySections(fromType, toType, sectionKeys)
     for _, sectionKey in ipairs(sectionKeys) do
         local rule = NS.DB.CopySectionRules and NS.DB.CopySectionRules[sectionKey]
         if rule then
-            local dynIgnore = nil
-            if sectionKey == "BUFFS" then
-                dynIgnore = { buffsPreview = true } -- настройки превью не копируем
-                if (toType == NS.UNIT_TYPES.ENEMY_PLAYER) or (toType == NS.UNIT_TYPES.ENEMY_NPC) then
-                    dynIgnore.buffsFriendlyFilterMode = true
-                else
-                    dynIgnore.buffsEnemyFilterMode = true
-                    dynIgnore.buffsPurgeGlow = true
-                end
-            elseif sectionKey == "DEBUFFS" then
-                dynIgnore = { debuffsPreview = true } -- настройки превью не копируем
-                if (toType == NS.UNIT_TYPES.ENEMY_PLAYER) or (toType == NS.UNIT_TYPES.ENEMY_NPC) then
-                    dynIgnore.debuffsFriendlyFilterMode = true
-                    dynIgnore.debuffsDispelGlow = true
-                else
-                    dynIgnore.debuffsEnemyFilterMode = true
-                end
-            elseif sectionKey == "CC" then
-                dynIgnore = { ccPreview = true } -- настройки превью не копируем
-            end
+            local dynIgnore = BuildDynIgnore(sectionKey, toType)
 
             if rule.mode == "keys" and rule.keys then
                 for _, k in ipairs(rule.keys) do
