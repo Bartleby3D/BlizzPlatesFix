@@ -1,5 +1,4 @@
-local AddonName, NS = ...
-
+local _, NS = ...
 -- Minimap icon (LibDataBroker-1.1 + LibDBIcon-1.0)
 -- Uses SavedVariables: BlizzPlatesFixDB.minimap = { hide = bool, minimapPos = number }
 
