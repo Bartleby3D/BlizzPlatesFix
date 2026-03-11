@@ -14,7 +14,6 @@ local function GetState(frame)
         lastFontFlag = nil,
         lastShadow = nil,
         lastText = nil,
-        lastLevel = nil,
         lastColorR = nil,
         lastColorG = nil,
         lastColorB = nil,
@@ -103,17 +102,16 @@ local function UpdateLevel(frame, unit, db, gdb)
             levelText:SetText("??")
             st.lastText = "??"
         end
-        st.lastLevel = nil
         local r, g, b = 1, 0, 0
         if st.lastColorR ~= r or st.lastColorG ~= g or st.lastColorB ~= b then
             levelText:SetTextColor(r, g, b)
             st.lastColorR, st.lastColorG, st.lastColorB = r, g, b
         end
     else
-        if st.lastLevel ~= level then
-            st.lastLevel = level
-            st.lastText = tostring(level)
-            levelText:SetText(st.lastText)
+        local txt = tostring(level)
+        if st.lastText ~= txt then
+            levelText:SetText(txt)
+            st.lastText = txt
         end
         
         -- Логика цвета
@@ -161,16 +159,11 @@ NS.Modules.Level = {
         UpdateLevel(frame, unit, db, gdb)
     end,
     Reset = function(frame)
-        local st = State[frame]
-        if not st then
-            if frame.BPF_LevelText then frame.BPF_LevelText:Hide() end
-            return
-        end
+        local st = GetState(frame)
         if frame.BPF_LevelText then
             frame.BPF_LevelText:Hide()
         end
         st.lastVisible = false
         st.lastText = nil
-        st.lastLevel = nil
     end
 }

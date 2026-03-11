@@ -77,9 +77,6 @@ local function RefreshAll(reason)
     if NS.ApplySystemCVars then
         NS.SafeCall(NS.ApplySystemCVars)
     end
-    if NS.ClearUnitConfigCache then
-        NS.ClearUnitConfigCache()
-    end
     if NS.RequestUpdateAll then
         NS.RequestUpdateAll(reason or "profiles", true, NS.REASON_ALL)
     elseif NS.ForceUpdateAll then

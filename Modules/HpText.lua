@@ -350,7 +350,7 @@ NS.Modules.HpText = {
             frame.BPF_PctText:Hide()
             frame.BPF_BrakR:Hide()
         end
-        local st = State[frame]
-        if st then st._disabled = true end
+        local st = GetState(frame)
+        st._disabled = true
     end
 }

@@ -204,11 +204,7 @@ NS.Modules.Transparency = {
         UpdateTransparency(frame, unit, db, gdb)
     end,
     Reset = function(frame)
-        local st = State[frame]
-        if st then
-            ApplyAlpha(frame, st, 1)
-        else
-            frame:SetAlpha(1)
-        end
+        local st = GetState(frame)
+        ApplyAlpha(frame, st, 1)
     end
 }

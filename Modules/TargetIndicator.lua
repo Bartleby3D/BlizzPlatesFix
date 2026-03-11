@@ -303,17 +303,7 @@ NS.Modules.TargetIndicator = {
         UpdateTargetIndicator(frame, unit, db, gdb)
     end,
     Reset = function(frame)
-        local st = State[frame]
-        if st then
-            HideAll(frame, st)
-        else
-            local arrow = frame.BPF_TargetArrow
-            if arrow then
-                arrow:Hide()
-                if arrow.ag and arrow.ag:IsPlaying() then arrow.ag:Stop() end
-            end
-            if frame.BPF_MarkerLeft then frame.BPF_MarkerLeft:Hide() end
-            if frame.BPF_MarkerRight then frame.BPF_MarkerRight:Hide() end
-        end
+        local st = GetState(frame)
+        HideAll(frame, st)
     end
 }

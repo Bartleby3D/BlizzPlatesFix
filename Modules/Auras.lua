@@ -726,6 +726,23 @@ local function RenderPreviewCategory(frame, db, gdb, auraType, list)
     local now = GetTime()
     spacing = spacing or 4
 
+    local keys = GetAuraStyleKeys(auraType)
+    local fontPath = NS.GetFontPath(gdb and gdb.globalFont)
+
+    local timeFontSize = db[keys.timeFontSize] or 12
+    local timeX = db[keys.timeX] or 0
+    local timeY = db[keys.timeY] or 0
+    local timeColor = db[keys.timeColor]
+
+    local stackFontSize = db[keys.stackFontSize] or 10
+    local stackX = db[keys.stackX] or 2
+    local stackY = db[keys.stackY] or -2
+    local stackColor = db[keys.stackColor]
+
+    local borderEnabled = db[keys.borderEnable]
+    local borderThickness = db[keys.borderThickness]
+    local borderColor = db[keys.borderColor]
+
     for i = 1, #list do
         local a = list[i]
         activeCount = activeCount + 1

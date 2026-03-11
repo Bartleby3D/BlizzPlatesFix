@@ -3,29 +3,6 @@ local _, NS = ...
 local STANDARD_TEXT_FONT = _G.STANDARD_TEXT_FONT
 local FrameState = setmetatable({}, { __mode = "k" })
 
--- Cache references to NPC unit-type DB tables to avoid repeated NS.Config.GetTable calls
--- in hot paths (GetUnitColor is called very frequently).
-local _cachedProfileName = nil
-local _cachedEnemyNpcDB = nil
-local _cachedFriendlyNpcDB = nil
-
-local function RefreshNpcProfileRefs()
-    local cfg = NS.Config
-    if not cfg or type(cfg.GetTable) ~= "function" then
-        _cachedProfileName = nil
-        _cachedEnemyNpcDB = nil
-        _cachedFriendlyNpcDB = nil
-        return
-    end
-
-    local prof = (type(cfg.GetActiveProfileName) == "function") and cfg.GetActiveProfileName() or nil
-    if prof ~= _cachedProfileName or _cachedEnemyNpcDB == nil or _cachedFriendlyNpcDB == nil then
-        _cachedProfileName = prof
-        _cachedEnemyNpcDB = cfg.GetTable(NS.UNIT_TYPES.ENEMY_NPC)
-        _cachedFriendlyNpcDB = cfg.GetTable(NS.UNIT_TYPES.FRIENDLY_NPC)
-    end
-end
-
 local function GetState(frame)
     local st = FrameState[frame]
     if st then return st end
@@ -86,19 +63,18 @@ end
 
 local function GetUnitColor(unit, db)
     if db.nameColorMode == 2 then
-        if _cachedEnemyNpcDB == nil or _cachedFriendlyNpcDB == nil then
-            RefreshNpcProfileRefs()
-        end
+        local enemyNpcDB = NS.Config and NS.Config.GetTable and NS.Config.GetTable(NS.UNIT_TYPES.ENEMY_NPC)
+        local friendlyNpcDB = NS.Config and NS.Config.GetTable and NS.Config.GetTable(NS.UNIT_TYPES.FRIENDLY_NPC)
 
         local c
-        if _cachedEnemyNpcDB and db == _cachedEnemyNpcDB then
+        if enemyNpcDB and db == enemyNpcDB then
             local reaction = UnitReaction(unit, "player")
             if reaction == 4 then
                 c = db.nameColorNeutral or db.nameColor
             else
                 c = db.nameColorHostile or db.nameColor
             end
-        elseif _cachedFriendlyNpcDB and db == _cachedFriendlyNpcDB then
+        elseif friendlyNpcDB and db == friendlyNpcDB then
             local reaction = UnitReaction(unit, "player")
             if reaction == 4 then
                 c = db.nameColorNeutral or db.nameColor
@@ -343,18 +319,11 @@ NS.Modules.NameText = {
         if not frame.healthBar then return end
         if not db then return end
 
-        -- Keep cached NPC DB table references in sync with profile changes.
-        RefreshNpcProfileRefs()
-
         local st = GetState(frame)
         ApplyStyle(frame, st, unit, db, gdb)
     end,
     Reset = function(frame)
-        local st = State[frame]
-        if not st then
-            SetBlizzBlocked(frame, false)
-            return
-        end
+        local st = GetState(frame)
         if st.fs then st.fs:Hide() end
         if st.wrapper then st.wrapper:Hide() end
         SetBlizzBlocked(frame, false)

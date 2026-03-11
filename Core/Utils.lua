@@ -69,61 +69,20 @@ local function SafeValue(v)
     return nil
 end
 
-NS.SafeBool = SafeBool
-NS.SafeValue = SafeValue
 
-
-
+local UnitConfigCache = {}
 function NS.ClearUnitConfigCache(unit)
-    -- Config cache is stored on the nameplate UnitFrame to avoid GUID-based
-    -- validation (UnitGUID can be a secret value in 12.x) and to avoid token reuse issues.
-    local function resolveFrame(u)
-        if not u then return nil end
-        local f = NS.ActiveNamePlates and NS.ActiveNamePlates[u]
-        if f then return f end
-        if C_NamePlate and C_NamePlate.GetNamePlateForUnit then
-            local np = C_NamePlate.GetNamePlateForUnit(u)
-            return np and np.UnitFrame or nil
-        end
-        return nil
-    end
-
     if unit then
-        local f = resolveFrame(unit)
-        if f then
-            f.BPF_ConfigCache = nil
-        end
+        UnitConfigCache[unit] = nil
         return
     end
-
-    if NS.ActiveNamePlates then
-        for _, f in pairs(NS.ActiveNamePlates) do
-            if f then
-                f.BPF_ConfigCache = nil
-            end
-        end
-    end
+    for k in pairs(UnitConfigCache) do UnitConfigCache[k] = nil end
 end
 
+-- ГЛАВНАЯ НОВАЯ ФУНКЦИЯ: Определение типа конфига для юнита
 function NS.GetUnitConfig(unit)
     if not unit then return nil, nil end
-
-    local function resolveFrame(u)
-        local f = NS.ActiveNamePlates and NS.ActiveNamePlates[u]
-        if f then return f end
-        if C_NamePlate and C_NamePlate.GetNamePlateForUnit then
-            local np = C_NamePlate.GetNamePlateForUnit(u)
-            return np and np.UnitFrame or nil
-        end
-        return nil
-    end
-
-    local frame = resolveFrame(unit)
-    local cache = frame and frame.BPF_ConfigCache
-    if cache and cache.unit == unit and cache.udb and cache.gdb then
-        return cache.udb, cache.gdb
-    end
-
+    
     local unitType
     if UnitIsPlayer(unit) then
         if UnitIsFriend("player", unit) then
@@ -150,11 +109,7 @@ function NS.GetUnitConfig(unit)
 
     local udb = NS.Config and NS.Config.GetTable and NS.Config.GetTable(unitType)
     local gdb = NS.Config and NS.Config.GetTable and NS.Config.GetTable("Global")
-
-    if frame then
-        frame.BPF_ConfigCache = { unit = unit, unitType = unitType, udb = udb, gdb = gdb }
-    end
-
+    
     return udb, gdb
 end
 

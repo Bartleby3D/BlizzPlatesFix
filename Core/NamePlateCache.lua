@@ -12,8 +12,6 @@ function NS.AddActivePlate(unit)
         frame.BPF_CoreCache = nil
         frame.BPF_InstanceHidden = nil
 
-        frame.BPF_ConfigCache = nil
-
         NS.ActiveNamePlates[unit] = frame
     end
 end

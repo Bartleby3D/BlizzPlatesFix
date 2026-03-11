@@ -37,13 +37,6 @@ if _G.CompactUnitFrame_UpdateAuras then
         local function SuppressContainer(container)
             if not container or container:IsForbidden() then return end
 
-            -- Микро-оптимизация: если уже подавлено и визуально скрыто — ничего не делаем.
-            if container.__BPF_Suppressed then
-                if (not container:IsShown()) and (not container.GetAlpha or container:GetAlpha() == 0) then
-                    return
-                end
-            end
-
             -- Скрываем жёстко: и альфа, и Hide(), чтобы не мигало.
             container:SetAlpha(0)
             if container:IsShown() then

@@ -343,7 +343,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", NS.L("Pandemic Glow"), nil, "buffsPandemic", nil, nil, nil, nil, 1)            local buffFilterFriendly = {
+            Add("checkbox", "Pandemic Glow", nil, "buffsPandemic", nil, nil, nil, nil, 1)            local buffFilterFriendly = {
                 { text = NS.L("All buffs"), value = "ALL" },
                 { text = NS.L("Only my buffs"), value = "MINE" },
                 { text = NS.L("Only my important buffs"), value = "MINE_IMPORTANT" },
@@ -352,13 +352,13 @@ function NS.Options.GetTable(mainIdx, subIdx)
             local buffFilterEnemy = {
                 { text = NS.L("All buffs"), value = "ALL" },
                 { text = NS.L("Only important buffs"), value = "IMPORTANT" },
-                { text = NS.L("Only dispelable/stealable"), value = "PURGE" },
-                { text = NS.L("Only important dispelable/stealable"), value = "IMPORTANT_AND_PURGE" },
-                { text = NS.L("Important or dispelable/stealable"), value = "IMPORTANT_OR_PURGE" },
+                { text = NS.L("Only dispellable/stealable"), value = "PURGE" },
+                { text = NS.L("Only important dispellable/stealable"), value = "IMPORTANT_AND_PURGE" },
+                { text = NS.L("Important or dispellable/stealable"), value = "IMPORTANT_OR_PURGE" },
             }
             if dbContext == NS.UNIT_TYPES.ENEMY_PLAYER or dbContext == NS.UNIT_TYPES.ENEMY_NPC then
                 Add("dropdown", NS.L("Buff filter"), nil, "buffsEnemyFilterMode", nil, nil, nil, buffFilterEnemy, 1)
-                Add("checkbox", NS.L("Highlight if dispelable/stealable"), nil, "buffsPurgeGlow", nil, nil, nil, nil, 1)
+                Add("checkbox", NS.L("Highlight: dispellable/stealable buff (Purge/Spellsteal)"), nil, "buffsPurgeGlow", nil, nil, nil, nil, 1)
             end
 
             if dbContext == NS.UNIT_TYPES.FRIENDLY_PLAYER or dbContext == NS.UNIT_TYPES.FRIENDLY_NPC then
@@ -419,12 +419,12 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", NS.L("Pandemic Glow"), nil, "debuffsPandemic", nil, nil, nil, nil, 1)            local debuffFilterFriendly = {
+            Add("checkbox", "Pandemic Glow", nil, "debuffsPandemic", nil, nil, nil, nil, 1)            local debuffFilterFriendly = {
                 { text = NS.L("All debuffs"), value = "ALL" },
                 { text = NS.L("Only important debuffs"), value = "IMPORTANT" },
-                { text = NS.L("Only dispelable by me"), value = "DISPEL" },
-                { text = NS.L("Only important dispelable by me"), value = "IMPORTANT_AND_DISPEL" },
-                { text = NS.L("Important or dispelable by me"), value = "IMPORTANT_OR_DISPEL" },
+                { text = NS.L("Only dispellable by me"), value = "DISPEL" },
+                { text = NS.L("Only important dispellable by me"), value = "IMPORTANT_AND_DISPEL" },
+                { text = NS.L("Important or dispellable by me"), value = "IMPORTANT_OR_DISPEL" },
             }
             local debuffFilterEnemy = {
                 { text = NS.L("All debuffs"), value = "ALL" },
@@ -437,7 +437,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
             end
             if dbContext == NS.UNIT_TYPES.FRIENDLY_PLAYER or dbContext == NS.UNIT_TYPES.FRIENDLY_NPC then
                 Add("dropdown", NS.L("Debuff filter"), nil, "debuffsFriendlyFilterMode", nil, nil, nil, debuffFilterFriendly, 1)
-                Add("checkbox", NS.L("Highlight if dispelable by me"), nil, "debuffsDispelGlow", nil, nil, nil, nil, 1)
+                Add("checkbox", NS.L("Highlight if dispellable by me"), nil, "debuffsDispelGlow", nil, nil, nil, nil, 1)
             end
 
             -- Col 2: Превью + Тексты
@@ -495,7 +495,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", NS.L("Pandemic Glow"), nil, "ccPandemic", nil, nil, nil, nil, 1)
+            Add("checkbox", "Pandemic Glow", nil, "ccPandemic", nil, nil, nil, nil, 1)
             if dbContext == NS.UNIT_TYPES.ENEMY_PLAYER or dbContext == NS.UNIT_TYPES.ENEMY_NPC then
                 Add("checkbox", NS.L("Mine only"), nil, "ccOnlyMine", nil, nil, nil, nil, 1)
             end
@@ -724,10 +724,6 @@ function NS.Options.GetTable(mainIdx, subIdx)
         })
 
         Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 30})
-        Add("separator", nil, nil, nil, nil, nil, nil, nil, 2, {size=260, offY=8})
-        Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 5})
-
-
         Add("header", NS.L("Deletion"), nil, nil, nil, nil, nil, nil, 2)
         Add("dropdown", NS.L("Profile to delete"), nil, "profileDeleteTarget", nil, nil, nil,
             function()

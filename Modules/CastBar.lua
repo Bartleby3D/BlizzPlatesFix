@@ -102,11 +102,7 @@ local function UpdateTargetText(cb, st, db)
 
     local unit = st.unit
 
-    if st.lastUnit ~= unit then
-        st.unitTarget = unit .. "target"
-        st.lastUnit = unit
-    end
-    local unitTarget = st.unitTarget
+    local unitTarget = unit .. "target"
     local name = UnitName(unitTarget)
     if name then
         st.targetText:SetText(" |cffFF0000=>|r " .. name)

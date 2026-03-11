@@ -156,7 +156,7 @@ TimerManager:SetScript("OnUpdate", function(_, elapsed)
             if durationObj then
                 local timeLeft = durationObj:GetRemainingDuration()
                 local fmt = st.db and st.db.cbTimerFormat or "%.1f"
-                st.text:SetFormattedText(fmt, timeLeft)
+                st.text:SetText(string.format(fmt, timeLeft))
                 st.text:Show()
             else
                 st.text:Hide()

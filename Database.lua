@@ -42,11 +42,12 @@ NS.DB.globalDefaults = {
     classifEnabled = true,
     classifHideAllies = true,
     classifShowBossRareOnly = false,
-    classifScale = 1.2,
+classifScale = 1.2,
     classifX = -67,
     classifY = 0,
     classifMirror = true,
-
+    
+    
     -- Иконка фракции (Alliance/Horde)
     factionIconEnabled = false,
     factionIconOnlyPlayers = true,
@@ -121,6 +122,7 @@ NS.DB.unitDefaults = {
     nameColorHostile  = {r=1, g=1, b=1}, -- Враждебный (EnemyNPC)
     nameColorFriendly = {r=1, g=1, b=1}, -- Союзник (FriendlyNPC)
 
+
     -- Текст ХП
     hpTextEnable = true,
     hpDisplayMode = "PERCENT",
@@ -193,10 +195,11 @@ NS.DB.unitDefaults = {
     buffsPurgeGlow = false,
     -- Dropdown aura filters (single choice)
     -- Friendly IMPORTANT uses Blizzard RAID filters; Enemy IMPORTANT uses Blizzard nameplate-only list.
-    buffsFriendlyFilterMode = "IMPORTANT", -- ALL|MINE|MINE_IMPORTANT|IMPORTANT
-    debuffsFriendlyFilterMode = "IMPORTANT", -- ALL|IMPORTANT|DISPEL|IMPORTANT_AND_DISPEL|IMPORTANT_OR_DISPEL
-    buffsEnemyFilterMode = "IMPORTANT", -- ALL|IMPORTANT|PURGE|IMPORTANT_AND_PURGE|IMPORTANT_OR_PURGE
-    debuffsEnemyFilterMode = "MINE", -- ALL|IMPORTANT|MINE|MINE_AND_IMPORTANT
+    buffsFriendlyFilterMode = "ALL", -- ALL|MINE|MINE_IMPORTANT|IMPORTANT
+    debuffsFriendlyFilterMode = "ALL", -- ALL|IMPORTANT|DISPEL|IMPORTANT_AND_DISPEL|IMPORTANT_OR_DISPEL
+    buffsEnemyFilterMode = "ALL", -- ALL|IMPORTANT|PURGE|IMPORTANT_AND_PURGE|IMPORTANT_OR_PURGE
+    debuffsEnemyFilterMode = "ALL", -- ALL|IMPORTANT|MINE|MINE_AND_IMPORTANT
+
 
     
     buffsBorderEnable = true,
@@ -292,6 +295,7 @@ function NS.DB.Init()
         end
     end
 end
+
 
 -- =====================================================================
 -- Копирование профилей существ (по разделам)

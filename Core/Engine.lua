@@ -206,35 +206,20 @@ function NS.Engine.FlushPending(maxPerTick)
 
     -- Компактация очереди, чтобы QueueHead не рос бесконечно.
     if QueueHead > 200 and QueueHead > (QueueTail / 2) then
-		-- В большинстве случаев выгоднее сдвигать элементы "на месте": меньше аллокаций и давления на GC.
-		-- Но при экстремально раздутой очереди (редко) выгодно пересоздать таблицу, чтобы сбросить capacity.
-		local n = 0
-		if QueueTail > 1500 then
-			local newQ = {}
-			for i = QueueHead, QueueTail do
-				local u = Queue[i]
-				if u then
-					n = n + 1
-					newQ[n] = u
-				end
-			end
-			Queue = newQ
-		else
-			for i = QueueHead, QueueTail do
-				local u = Queue[i]
-				if u then
-					n = n + 1
-					Queue[n] = u
-				end
-			end
-			for i = n + 1, QueueTail do
-				Queue[i] = nil
-			end
-		end
-		QueueHead = 1
-		QueueTail = n
-		queuedCount = n
-		-- InQueue остаётся корректным, т.к. мы не меняем факты присутствия юнитов в очереди.
+        local newQ = {}
+        local n = 0
+        for i = QueueHead, QueueTail do
+            local u = Queue[i]
+            if u then
+                n = n + 1
+                newQ[n] = u
+            end
+        end
+        Queue = newQ
+        QueueHead = 1
+        QueueTail = n
+        queuedCount = n
+        -- InQueue остаётся корректным, т.к. мы не меняем факты присутствия юнитов в очереди.
     end
 
     return processed

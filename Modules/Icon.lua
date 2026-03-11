@@ -121,7 +121,7 @@ local function UpdateIcon(frame, unit, db, gdb)
 
     if isBoss then
         atlas = "worldquest-icon-boss"
-        bossSizeMult = 1.3
+        bossSizeMult = 1.2
     elseif isRareElite then
         atlas = "nameplates-icon-elite-silver"
     elseif isRare then
@@ -178,11 +178,7 @@ NS.Modules.Icon = {
         UpdateIcon(frame, unit, db, gdb)
     end,
     Reset = function(frame)
-        local st = State[frame]
-        if not st then
-            if frame.BPF_ClassIcon then frame.BPF_ClassIcon:Hide() end
-            return
-        end
+        local st = GetState(frame)
         if frame.BPF_ClassIcon then
             frame.BPF_ClassIcon:Hide()
         end
