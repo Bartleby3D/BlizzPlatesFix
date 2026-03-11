@@ -23,7 +23,7 @@ You may use this addon for personal purposes. Any full or partial unauthorized c
 
 The project uses the following third-party developments:
 
-Libraries: LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0, LibSharedMedia-3.0.
+Libraries: LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0, LibRangeCheck-3.0, LibSharedMedia-3.0.
 Fonts: Roboto Condensed (Licensed under SIL Open Font License 1.1).
 
 ---
