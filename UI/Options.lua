@@ -343,7 +343,12 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", "Pandemic Glow", nil, "buffsPandemic", nil, nil, nil, nil, 1)            local buffFilterFriendly = {
+            Add("checkbox", NS.L("Pandemic Glow"), nil, "buffsPandemic", nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Non-target alpha"), nil, "buffsNonTargetAlphaEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
+            Add("slider", NS.L("Alpha"), nil, "buffsNonTargetAlpha", 0, 1, 0.05, nil, 1, {offX=20, requires = { key = "buffsNonTargetAlphaEnable", value = true }})
+            Add("checkbox", NS.L("Non-target scale"), nil, "buffsNonTargetScaleEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
+            Add("slider", NS.L("Scale"), nil, "buffsNonTargetScale", 0.3, 1, 0.05, nil, 1, {offX=20, requires = { key = "buffsNonTargetScaleEnable", value = true }})
+            local buffFilterFriendly = {
                 { text = NS.L("All buffs"), value = "ALL" },
                 { text = NS.L("Only my buffs"), value = "MINE" },
                 { text = NS.L("Only my important buffs"), value = "MINE_IMPORTANT" },
@@ -419,7 +424,12 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", "Pandemic Glow", nil, "debuffsPandemic", nil, nil, nil, nil, 1)            local debuffFilterFriendly = {
+            Add("checkbox", NS.L("Pandemic Glow"), nil, "debuffsPandemic", nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Non-target alpha"), nil, "debuffsNonTargetAlphaEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
+            Add("slider", NS.L("Alpha"), nil, "debuffsNonTargetAlpha", 0, 1, 0.05, nil, 1, {offX=20, requires = { key = "debuffsNonTargetAlphaEnable", value = true }})
+            Add("checkbox", NS.L("Non-target scale"), nil, "debuffsNonTargetScaleEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
+            Add("slider", NS.L("Scale"), nil, "debuffsNonTargetScale", 0.3, 1, 0.05, nil, 1, {offX=20, requires = { key = "debuffsNonTargetScaleEnable", value = true }})
+            local debuffFilterFriendly = {
                 { text = NS.L("All debuffs"), value = "ALL" },
                 { text = NS.L("Only important debuffs"), value = "IMPORTANT" },
                 { text = NS.L("Only dispellable by me"), value = "DISPEL" },
@@ -495,7 +505,11 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", "Pandemic Glow", nil, "ccPandemic", nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Pandemic Glow"), nil, "ccPandemic", nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Non-target alpha"), nil, "ccNonTargetAlphaEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
+            Add("slider", NS.L("Alpha"), nil, "ccNonTargetAlpha", 0, 1, 0.05, nil, 1, {offX=20, requires = { key = "ccNonTargetAlphaEnable", value = true }})
+            Add("checkbox", NS.L("Non-target scale"), nil, "ccNonTargetScaleEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
+            Add("slider", NS.L("Scale"), nil, "ccNonTargetScale", 0.3, 1, 0.05, nil, 1, {offX=20, requires = { key = "ccNonTargetScaleEnable", value = true }})
             if dbContext == NS.UNIT_TYPES.ENEMY_PLAYER or dbContext == NS.UNIT_TYPES.ENEMY_NPC then
                 Add("checkbox", NS.L("Mine only"), nil, "ccOnlyMine", nil, nil, nil, nil, 1)
             end
@@ -609,22 +623,32 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -10})
             Add("checkbox", NS.L("Bosses and rares only"), nil, "classifShowBossRareOnly", nil, nil, nil, nil, 1, {offX=20})
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -10})            Add("slider", NS.L("Size"), nil, "classifScale", 0.5, 3, 0.1, nil, 1, {offX=20})
-            Add("slider", NS.L("Offset X"), nil, "classifX", -100, 100, 0.5, nil, 1, {offX=20})
-            Add("slider", NS.L("Offset Y"), nil, "classifY", -100, 100, 0.5, nil, 1, {offX=20})
+            Add("slider", NS.L("Offset X"), nil, "classifX", -150, 150, 0.5, nil, 1, {offX=20})
+            Add("slider", NS.L("Offset Y"), nil, "classifY", -150, 150, 0.5, nil, 1, {offX=20})
             Add("checkbox", NS.L("Mirror icon"), nil, "classifMirror", nil, nil, nil, nil, 1, {offX=20})
 
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 10})
             Add("separator", nil, nil, nil, nil, nil, nil, nil, 1, {size=260, offY=8})
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
-            Add("header", NS.L("|cff00aaffFaction icon|r"), nil, nil, nil, nil, nil, nil, 1)
+            Add("header", NS.L("Faction icon"), nil, nil, nil, nil, nil, nil, 1)
             Add("checkbox", NS.L("Enable"), nil, "factionIconEnabled", nil, nil, nil, nil, 1)
             Add("checkbox", NS.L("Players only"), nil, "factionIconOnlyPlayers", nil, nil, nil, nil, 1, {offX=20})
             Add("slider", NS.L("Size"), nil, "factionIconSize", 8, 40, 1, nil, 1, {offX=20})
-            Add("slider", NS.L("Offset X"), nil, "factionIconX", -100, 100, 0.5, nil, 1, {offX=20})
-            Add("slider", NS.L("Offset Y"), nil, "factionIconY", -100, 100, 0.5, nil, 1, {offX=20})
+            Add("slider", NS.L("Offset X"), nil, "factionIconX", -150, 150, 0.5, nil, 1, {offX=20})
+            Add("slider", NS.L("Offset Y"), nil, "factionIconY", -150, 150, 0.5, nil, 1, {offX=20})
 
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 10})
+            Add("header", NS.L("Quest objective icon"), nil, nil, nil, nil, nil, nil, 2)
+            Add("checkbox", NS.L("Enable"), nil, "questIconEnabled", nil, nil, nil, nil, 2)
+            Add("slider", NS.L("Size"), nil, "questIconSize", 8, 40, 1, nil, 2, {offX=20})
+            Add("slider", NS.L("Offset X"), nil, "questIconX", -150, 150, 0.5, nil, 2, {offX=20})
+            Add("slider", NS.L("Offset Y"), nil, "questIconY", -150, 150, 0.5, nil, 2, {offX=20})
+
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 10})
+            Add("separator", nil, nil, nil, nil, nil, nil, nil, 2, {size=260, offY=8})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 5})
+
             Add("header", NS.L("Opacity settings"), nil, nil, nil, nil, nil, nil, 2)
             Add("checkbox", NS.L("Enable"), nil, "transparencyEnabled", nil, nil, nil, nil, 2)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -5})

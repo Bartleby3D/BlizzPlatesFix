@@ -121,7 +121,7 @@ local function UpdateIcon(frame, unit, db, gdb)
 
     if isBoss then
         atlas = "worldquest-icon-boss"
-        bossSizeMult = 1.2
+        bossSizeMult = 1.1
     elseif isRareElite then
         atlas = "nameplates-icon-elite-silver"
     elseif isRare then

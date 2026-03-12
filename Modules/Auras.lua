@@ -221,6 +221,16 @@ local function GetAuraStyleKeys(auraType)
     return AURA_STYLE_KEYS[auraType] or AURA_STYLE_KEYS.CC
 end
 
+local function GetAuraNonTargetSettings(db, auraType)
+    if auraType == "BUFF" then
+        return db.buffsNonTargetAlphaEnable, db.buffsNonTargetAlpha, db.buffsNonTargetScaleEnable, db.buffsNonTargetScale
+    elseif auraType == "DEBUFF" then
+        return db.debuffsNonTargetAlphaEnable, db.debuffsNonTargetAlpha, db.debuffsNonTargetScaleEnable, db.debuffsNonTargetScale
+    else
+        return db.ccNonTargetAlphaEnable, db.ccNonTargetAlpha, db.ccNonTargetScaleEnable, db.ccNonTargetScale
+    end
+end
+
 local function ApplyAuraBorderStyle(icon, borderEnabled, thickness, borderColor)
     if not icon or not icon.border then return end
 
@@ -349,6 +359,7 @@ local function ProcessAuraCategory(frame, unit, db, gdb, auraType, ignoreMap)
     local pool, enabled, filter, size, iconH, posX, posY, align, spacing, timerEdge, timerEnable, stacksEnable
 
     local isFriend = UnitIsFriend("player", unit)
+    local isTarget = unit and UnitExists("target") and UnitIsUnit(unit, "target")
 
     -- One dropdown mode per context (friendly/enemy) and per aura type.
     local friendlyBuffMode  = db.buffsFriendlyFilterMode
@@ -484,6 +495,22 @@ local borderEnabled = db[keys.borderEnable]
 local borderThickness = db[keys.borderThickness]
 local borderColor = db[keys.borderColor]
 
+local nonTargetAlphaEnable, nonTargetAlpha, nonTargetScaleEnable, nonTargetScale = GetAuraNonTargetSettings(db, auraType)
+nonTargetAlpha = tonumber(nonTargetAlpha) or 0.5
+if nonTargetAlpha < 0 then nonTargetAlpha = 0 elseif nonTargetAlpha > 1 then nonTargetAlpha = 1 end
+nonTargetScale = tonumber(nonTargetScale) or 0.85
+if nonTargetScale < 0.3 then nonTargetScale = 0.3 elseif nonTargetScale > 1 then nonTargetScale = 1 end
+
+local renderScale = 1
+if not isTarget and nonTargetScaleEnable then
+    renderScale = nonTargetScale
+end
+
+local renderAlpha = 1
+if not isTarget and nonTargetAlphaEnable then
+    renderAlpha = nonTargetAlpha
+end
+
     -- 1. Сначала применяем данные ко всем валидным аурам
     for _, auraInstanceID in ipairs(ids) do
         local aura = (NS.AurasData and NS.AurasData.GetAura) and NS.AurasData.GetAura(frame, unit, auraInstanceID) or nil
@@ -559,9 +586,30 @@ local borderColor = db[keys.borderColor]
                 activeCount = activeCount + 1
                 local icon = GetIcon(frame, pool, activeCount)
 
-                ApplyAuraTextStyle(icon, fontPath, timeFontSize, timeX, timeY, timeColor, stackFontSize, stackX, stackY, stackColor)
+                local scaledTimeFontSize = math.max(1, math.floor((timeFontSize or 12) * renderScale + 0.5))
+                local scaledTimeX = math.floor((timeX or 0) * renderScale + 0.5)
+                local scaledTimeY = math.floor((timeY or 0) * renderScale + 0.5)
 
-                ApplyIconRect(icon, size, iconH or size)
+                local scaledStackFontSize = math.max(1, math.floor((stackFontSize or 10) * renderScale + 0.5))
+                local scaledStackX = math.floor((stackX or 2) * renderScale + 0.5)
+                local scaledStackY = math.floor((stackY or -2) * renderScale + 0.5)
+
+                ApplyAuraTextStyle(
+                    icon,
+                    fontPath,
+                    scaledTimeFontSize,
+                    scaledTimeX,
+                    scaledTimeY,
+                    timeColor,
+                    scaledStackFontSize,
+                    scaledStackX,
+                    scaledStackY,
+                    stackColor
+                )
+
+                local renderWidth = size * renderScale
+                local renderHeight = (iconH or size) * renderScale
+                ApplyIconRect(icon, renderWidth, renderHeight)
                 ApplyAuraBorderStyle(icon, borderEnabled, borderThickness, borderColor)
                 icon.tex:SetTexture(aura.icon)
 
@@ -591,7 +639,7 @@ local borderColor = db[keys.borderColor]
                 if timerEnable == false then
                     icon.cd:Hide()
                     icon.Pandemic:SetAlpha(0)
-                    icon:SetAlpha(1)
+                    icon:SetAlpha(renderAlpha)
                 else
                     icon.cd:SetDrawEdge(timerEdge and true or false)
                     icon.cd:SetHideCountdownNumbers(false)
@@ -609,7 +657,7 @@ local borderColor = db[keys.borderColor]
                         icon.cd:SetAlpha(cdAlpha)
 
                         -- 2. Прозрачность самой иконки
-                        icon:SetAlpha(1)
+                        icon:SetAlpha(renderAlpha)
                 
                         -- 3. Красное свечение пандемика (отключаем для вечных)
                         if usePandemic and pandemicCurve then
@@ -623,7 +671,7 @@ local borderColor = db[keys.borderColor]
                     else
                         icon.cd:Hide()
                         icon.Pandemic:SetAlpha(0)
-                        icon:SetAlpha(1)
+                        icon:SetAlpha(renderAlpha)
                     end
                 end
 
@@ -638,7 +686,8 @@ local borderColor = db[keys.borderColor]
     if activeCount > 0 then
         spacing = spacing or 4
         -- Считаем точную длину всей полосы иконок
-        local totalWidth = (activeCount * size) + ((activeCount - 1) * spacing)
+        local layoutWidth = size * renderScale
+        local totalWidth = (activeCount * layoutWidth) + ((activeCount - 1) * spacing)
 
         for i = 1, activeCount do
             local icon = pool[i]
@@ -651,7 +700,7 @@ local borderColor = db[keys.borderColor]
                     icon:SetPoint("BOTTOMRIGHT", frame.healthBar, "TOPLEFT", posX, posY)
                 else -- CENTER
                     -- Смещаем первую иконку влево на половину длины всей группы аур
-                    icon:SetPoint("BOTTOM", frame.healthBar, "TOP", posX - (totalWidth / 2) + (size / 2), posY)
+                    icon:SetPoint("BOTTOM", frame.healthBar, "TOP", posX - (totalWidth / 2) + (layoutWidth / 2), posY)
                 end
             else
                 if align == "RIGHT" then
@@ -674,7 +723,7 @@ end
 -- ============================================================================
 -- 3.5. PREVIEW MODE (фейковые ауры из Modules/AurasPreview.lua)
 -- ============================================================================
-local function RenderPreviewCategory(frame, db, gdb, auraType, list)
+local function RenderPreviewCategory(frame, unit, db, gdb, auraType, list)
     local st = GetState(frame)
     local pool, enabled, size, iconH, posX, posY, align, spacing, timerEdge, timerEnable, stacksEnable
 
@@ -724,7 +773,17 @@ local function RenderPreviewCategory(frame, db, gdb, auraType, list)
     local maxAuras = 8
     local activeCount = 0
     local now = GetTime()
+    local isTarget = unit and UnitExists("target") and UnitIsUnit(unit, "target")
     spacing = spacing or 4
+
+    local usePandemic
+    if auraType == "BUFF" then
+        usePandemic = (db.buffsPandemic ~= false)
+    elseif auraType == "DEBUFF" then
+        usePandemic = (db.debuffsPandemic ~= false)
+    else
+        usePandemic = (db.ccPandemic ~= false)
+    end
 
     local keys = GetAuraStyleKeys(auraType)
     local fontPath = NS.GetFontPath(gdb and gdb.globalFont)
@@ -743,14 +802,51 @@ local function RenderPreviewCategory(frame, db, gdb, auraType, list)
     local borderThickness = db[keys.borderThickness]
     local borderColor = db[keys.borderColor]
 
+    local nonTargetAlphaEnable, nonTargetAlpha, nonTargetScaleEnable, nonTargetScale = GetAuraNonTargetSettings(db, auraType)
+    nonTargetAlpha = tonumber(nonTargetAlpha) or 0.5
+    if nonTargetAlpha < 0 then nonTargetAlpha = 0 elseif nonTargetAlpha > 1 then nonTargetAlpha = 1 end
+    nonTargetScale = tonumber(nonTargetScale) or 0.85
+    if nonTargetScale < 0.3 then nonTargetScale = 0.3 elseif nonTargetScale > 1 then nonTargetScale = 1 end
+
+    local renderScale = 1
+    if not isTarget and nonTargetScaleEnable then
+        renderScale = nonTargetScale
+    end
+
+    local renderAlpha = 1
+    if not isTarget and nonTargetAlphaEnable then
+        renderAlpha = nonTargetAlpha
+    end
+
     for i = 1, #list do
         local a = list[i]
         activeCount = activeCount + 1
         local icon = GetIcon(frame, pool, activeCount)
 
-        ApplyAuraTextStyle(icon, fontPath, timeFontSize, timeX, timeY, timeColor, stackFontSize, stackX, stackY, stackColor)
+        local scaledTimeFontSize = math.max(1, math.floor((timeFontSize or 12) * renderScale + 0.5))
+        local scaledTimeX = math.floor((timeX or 0) * renderScale + 0.5)
+        local scaledTimeY = math.floor((timeY or 0) * renderScale + 0.5)
 
-        ApplyIconRect(icon, size, iconH or size)
+        local scaledStackFontSize = math.max(1, math.floor((stackFontSize or 10) * renderScale + 0.5))
+        local scaledStackX = math.floor((stackX or 2) * renderScale + 0.5)
+        local scaledStackY = math.floor((stackY or -2) * renderScale + 0.5)
+
+        ApplyAuraTextStyle(
+            icon,
+            fontPath,
+            scaledTimeFontSize,
+            scaledTimeX,
+            scaledTimeY,
+            timeColor,
+            scaledStackFontSize,
+            scaledStackX,
+            scaledStackY,
+            stackColor
+        )
+
+        local renderWidth = size * renderScale
+        local renderHeight = (iconH or size) * renderScale
+        ApplyIconRect(icon, renderWidth, renderHeight)
         ApplyAuraBorderStyle(icon, borderEnabled, borderThickness, borderColor)
         SetDispelGlow(icon, false)
         icon.tex:SetTexture(a.icon)
@@ -796,11 +892,35 @@ else
 end
 
 
-        icon.Pandemic:SetAlpha(0)
+        local panAlpha = 0
+        if usePandemic and dur > 0 then
+            local remaining
+
+            if startFromList then
+                remaining = dur - (now - startFromList)
+            else
+                remaining = rem
+            end
+
+            if remaining < 0 then remaining = 0 end
+            if remaining > dur then remaining = dur end
+
+            local remainingPct = remaining / dur
+
+            -- Эквивалент обычной pandemicCurve:
+            -- curve points: (0 -> 1), (0.3 -> 0), step
+            -- то есть glow активен в последних 30% длительности
+            if remaining > 0 and remainingPct <= 0.3 then
+                panAlpha = 1
+            end
+        end
+
+        icon.Pandemic:SetAlpha(panAlpha)
+
         if a.inactive then
-            icon:SetAlpha(0.25)
+            icon:SetAlpha(renderAlpha * 0.25)
         else
-            icon:SetAlpha(1)
+            icon:SetAlpha(renderAlpha)
         end
 
         if activeCount >= maxAuras then break end
@@ -808,7 +928,8 @@ end
 
     -- Positioning (как в обычном режиме)
     if activeCount > 0 then
-        local totalWidth = (activeCount * size) + ((activeCount - 1) * spacing)
+        local layoutWidth = size * renderScale
+        local totalWidth = (activeCount * layoutWidth) + ((activeCount - 1) * spacing)
 
         for i = 1, activeCount do
             local icon = pool[i]
@@ -820,7 +941,7 @@ end
                 elseif align == "RIGHT" then
                     icon:SetPoint("BOTTOMRIGHT", frame.healthBar, "TOPLEFT", posX, posY)
                 else -- CENTER
-                    icon:SetPoint("BOTTOM", frame.healthBar, "TOP", posX - (totalWidth / 2) + (size / 2), posY)
+                    icon:SetPoint("BOTTOM", frame.healthBar, "TOP", posX - (totalWidth / 2) + (layoutWidth / 2), posY)
                 end
             else
                 if align == "RIGHT" then
@@ -868,21 +989,21 @@ NS.Modules.Auras = {
             end
 
             if db.buffsEnable and NS.AurasPreview.IsBuffsEnabled and NS.AurasPreview.IsBuffsEnabled(db) then
-                RenderPreviewCategory(frame, db, gdb, "BUFF", buffs)
+                RenderPreviewCategory(frame, unit, db, gdb, "BUFF", buffs)
             else
-                RenderPreviewCategory(frame, db, gdb, "BUFF", nil)
+                RenderPreviewCategory(frame, unit, db, gdb, "BUFF", nil)
             end
 
             if db.debuffsEnable and NS.AurasPreview.IsDebuffsEnabled and NS.AurasPreview.IsDebuffsEnabled(db) then
-                RenderPreviewCategory(frame, db, gdb, "DEBUFF", debuffs)
+                RenderPreviewCategory(frame, unit, db, gdb, "DEBUFF", debuffs)
             else
-                RenderPreviewCategory(frame, db, gdb, "DEBUFF", nil)
+                RenderPreviewCategory(frame, unit, db, gdb, "DEBUFF", nil)
             end
 
             if db.ccEnable and NS.AurasPreview.IsCCEnabled and NS.AurasPreview.IsCCEnabled(db) then
-                RenderPreviewCategory(frame, db, gdb, "CC", cc)
+                RenderPreviewCategory(frame, unit, db, gdb, "CC", cc)
             else
-                RenderPreviewCategory(frame, db, gdb, "CC", nil)
+                RenderPreviewCategory(frame, unit, db, gdb, "CC", nil)
             end
 
             return

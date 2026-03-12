@@ -22,7 +22,7 @@ NS.DB.globalDefaults = {
     globalFont = "Friz Quadrata TT",
     globalScale = 1.0,
     globalX = 0,
-    globalY = 0,
+    globalY = -10,
 
     -- Minimap
     showMinimapIcon = true,
@@ -42,18 +42,24 @@ NS.DB.globalDefaults = {
     classifEnabled = true,
     classifHideAllies = true,
     classifShowBossRareOnly = false,
-classifScale = 1.2,
-    classifX = -67,
+    classifScale = 1.2,
+    classifX = -70,
     classifY = 0,
     classifMirror = true,
     
     
     -- Иконка фракции (Alliance/Horde)
-    factionIconEnabled = false,
+    factionIconEnabled = true,
     factionIconOnlyPlayers = true,
     factionIconSize = 25,
-    factionIconX = 70,
+    factionIconX = -70,
     factionIconY = -5,
+
+    -- Quest objective icon
+    questIconEnabled = true,
+    questIconSize = 25,
+    questIconX = -77,
+    questIconY = 0,
 
     -- Доп эффекты
     hideAbsorbGlow = true,
@@ -171,14 +177,14 @@ NS.DB.unitDefaults = {
     cbBarEnabled = true, -- отдельная галочка: только полоса применения
     cbWidth = 142, cbHeight = 8,
     cbX = 0, cbY = -1,
-    cbIconEnabled = true, cbIconSize = 20, cbIconX = -3, cbIconY = 7,
-    cbIconBorderEnable = true, cbIconBorderThickness = 2, cbIconBorderColor = {r=0, g=0, b=0, a=1},
+    cbIconEnabled = false, cbIconSize = 20, cbIconX = -3, cbIconY = 7,
+    cbIconBorderEnable = false, cbIconBorderThickness = 2, cbIconBorderColor = {r=0, g=0, b=0, a=1},
     cbTextEnabled = true, cbTextJustify = "LEFT", cbTextOutline = "SHADOW", cbFontSize = 9,
     cbTextX = -3, cbTextY = 0.5, cbTextMaxLength = 0, cbTextColor = {r=1, g=1, b=1},
-    cbTimerEnabled = true, cbTimerFormat = "%.0f", cbTimerOutline = "SHADOW", 
+    cbTimerEnabled = false, cbTimerFormat = "%.0f", cbTimerOutline = "SHADOW", 
     cbTimerColor = {r=1, g=1, b=1}, cbTimerFontSize = 15, cbTimerX = 0, cbTimerY = 0,
     cbTargetEnabled = true, cbTargetJustify = "LEFT",
-    cbTargetOutline = "SHADOW", cbTargetFontSize = 9, cbTargetX = -18, cbTargetY = -10,
+    cbTargetOutline = "SHADOW", cbTargetFontSize = 9, cbTargetX = -7, cbTargetY = -10,
     cbTargetMaxLength = 20, cbTargetMode = "CLASS", cbTargetColor = {r=1, g=1, b=1},
 
     -- Ауры
@@ -225,6 +231,18 @@ NS.DB.unitDefaults = {
     buffsPandemic = true,
     debuffsPandemic = true,
     ccPandemic = true,
+    buffsNonTargetAlphaEnable = false,
+    buffsNonTargetAlpha = 0.5,
+    buffsNonTargetScaleEnable = false,
+    buffsNonTargetScale = 0.85,
+    debuffsNonTargetAlphaEnable = false,
+    debuffsNonTargetAlpha = 0.5,
+    debuffsNonTargetScaleEnable = false,
+    debuffsNonTargetScale = 0.85,
+    ccNonTargetAlphaEnable = false,
+    ccNonTargetAlpha = 0.5,
+    ccNonTargetScaleEnable = false,
+    ccNonTargetScale = 0.85,
     -- Ауры: таймер/стаки (отдельно для BUFF/DEBUFF/CC)
     buffsTimeFontSize = 15, buffsTimeX = 0, buffsTimeY = 0, buffsTimeColor = {r=1, g=1, b=1},
     buffsStackFontSize = 10, buffsStackX = 2, buffsStackY = -2, buffsStackColor = {r=1, g=1, b=1},

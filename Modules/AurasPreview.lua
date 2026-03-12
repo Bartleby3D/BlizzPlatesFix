@@ -46,17 +46,30 @@ local function IsExpanded()
     return t < GROW_WINDOW
 end
 
-local function MakeEntry(spellID, duration, stacks)
+local function MakeEntry(spellID, duration, stacks, forcePandemic)
     local tex = GetSpellTex(spellID) or FALLBACK_ICON
     duration = tonumber(duration) or 0
     stacks = tonumber(stacks) or 0
     local now = GetTime()
-    -- старт делаем "в прошлом", чтобы сразу было видно прогресс.
+
     local start = now
     if duration > 1 then
-        start = now - math.random(0, math.floor(duration - 1))
+        if forcePandemic then
+            -- Ставим ауру сразу в последние 20% длительности,
+            -- чтобы Pandemic Glow был виден моментально.
+            start = now - (duration * 0.8)
+        else
+            start = now - math.random(0, math.floor(duration - 1))
+        end
     end
-    return { icon = tex, duration = duration, start = start, stacks = stacks }
+
+    return {
+        icon = tex,
+        duration = duration,
+        start = start,
+        stacks = stacks,
+        forcePandemic = forcePandemic and true or false,
+    }
 end
 
 local function EnsureState()
@@ -64,27 +77,27 @@ local function EnsureState()
 
     -- BUFF
     PreviewState.buffs = {
-        MakeEntry(21562, 120, 3),  -- Power Word: Fortitude
-        MakeEntry(6673, 120, 2),   -- Battle Shout
-        MakeEntry(104773, 12, 0),  -- Unending Resolve
-        MakeEntry(1022, 10, 4),    -- Blessing of Protection
-        MakeEntry(12472, 20, 0),   -- Icy Veins
+        MakeEntry(21562, 120, 3),        -- Power Word: Fortitude
+        MakeEntry(6673, 120, 2),         -- Battle Shout
+        MakeEntry(104773, 12, 0, true),  -- Unending Resolve
+        MakeEntry(1022, 10, 4),          -- Blessing of Protection
+        MakeEntry(12472, 20, 0),         -- Icy Veins
     }
 
     -- DEBUFF
     PreviewState.debuffs = {
-        MakeEntry(57723, 12, 2),   -- Sated/Exhaustion (fallback если нет)
-        MakeEntry(25771, 18, 3),   -- Forbearance
-        MakeEntry(34914, 12, 0),   -- Vampiric Touch
-        MakeEntry(6788, 18, 5),    -- Weakened Soul
-        MakeEntry(188389, 8, 0),   -- Flame Shock (id может отличаться)
+        MakeEntry(57723, 12, 2),         -- Sated/Exhaustion (fallback если нет)
+        MakeEntry(25771, 18, 3),         -- Forbearance
+        MakeEntry(34914, 12, 0, true),   -- Vampiric Touch
+        MakeEntry(6788, 18, 5),          -- Weakened Soul
+        MakeEntry(188389, 8, 0),         -- Flame Shock (id может отличаться)
     }
 
     -- CC
     PreviewState.cc = {
-        MakeEntry(3355, 8, 2),     -- Freezing Trap
-        MakeEntry(853, 6, 0),      -- Hammer of Justice
-        MakeEntry(118, 8, 3),      -- Polymorph
+        MakeEntry(3355, 8, 2, true),     -- Freezing Trap
+        MakeEntry(853, 6, 0),            -- Hammer of Justice
+        MakeEntry(118, 8, 3),            -- Polymorph
     }
 end
 
@@ -97,12 +110,17 @@ local function RotateExpired(list)
         local dur = tonumber(a.duration) or 0
         local start = tonumber(a.start) or now
         if dur > 0 and (now - start) >= dur then
-            -- Перезапускаем ауру (чтобы не "залипала" пустая иконка после окончания)
-            a.start = now
-            -- немного рандома, чтобы визуально отличались
             if dur >= 10 then
                 a.duration = math.random(6, math.min(30, math.floor(dur)))
+                dur = tonumber(a.duration) or dur
             end
+
+            if a.forcePandemic and dur > 1 then
+                a.start = now - (dur * 0.8)
+            else
+                a.start = now
+            end
+
             changed = true
         end
     end
