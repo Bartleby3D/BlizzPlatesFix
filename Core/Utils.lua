@@ -69,6 +69,9 @@ local function SafeValue(v)
     return nil
 end
 
+NS.SafeBool = SafeBool
+NS.SafeValue = SafeValue
+
 
 local UnitConfigCache = {}
 function NS.ClearUnitConfigCache(unit)
@@ -145,4 +148,31 @@ function NS.IsSimplifiedNotTarget(frame, unit)
         return true
     end
     return false
+end
+
+
+function NS.GetStatusIconAnchorInfo(frame, anchorMode)
+    if anchorMode == "Name" then
+        local nameText = frame and frame.BPF_NameTextFS
+        if nameText then
+            return "BOTTOM", nameText, "TOP", "Name"
+        end
+
+        local nameAnchor = frame and frame.BPF_NameTextWrapper
+        if nameAnchor then
+            return "BOTTOM", nameAnchor, "TOP", "Name"
+        end
+    end
+
+    local hb = frame and (frame.healthBar or frame)
+    return "CENTER", hb, "CENTER", "HpBar"
+end
+
+function NS.ApplyStatusIconAnchor(region, frame, anchorMode, offX, offY)
+    if not region or not frame then return "HpBar" end
+    local point, relTo, relPoint, resolved = NS.GetStatusIconAnchorInfo(frame, anchorMode)
+    if not relTo then return resolved or "HpBar" end
+    region:ClearAllPoints()
+    region:SetPoint(point, relTo, relPoint, offX or 0, offY or 0)
+    return resolved
 end

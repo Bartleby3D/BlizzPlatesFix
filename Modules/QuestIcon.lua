@@ -18,6 +18,8 @@ local function GetState(frame)
         lastSize = nil,
         lastX = nil,
         lastY = nil,
+        lastAlpha = nil,
+        lastAnchor = nil,
         lastParent = nil,
     }
     State[frame] = st
@@ -166,31 +168,21 @@ local function Update(frame, unit, dbUnit, dbGlobal)
 
     local offX = dbGlobal.questIconX or 0
     local offY = dbGlobal.questIconY or 16
-    if st.lastX ~= offX or st.lastY ~= offY then
-        icon:ClearAllPoints()
-        icon:SetPoint("CENTER", frame.healthBar, "CENTER", offX, offY)
+    local anchor = dbGlobal.questIconAnchor or "HpBar"
+    if st.lastX ~= offX or st.lastY ~= offY or st.lastAnchor ~= anchor then
+        st.lastAnchor = NS.ApplyStatusIconAnchor(icon, frame, anchor, offX, offY)
         st.lastX, st.lastY = offX, offY
+    end
+
+    local alpha = dbGlobal.questIconAlpha
+    if alpha == nil then alpha = 1 end
+    if st.lastAlpha ~= alpha then
+        icon:SetAlpha(alpha)
+        st.lastAlpha = alpha
     end
 end
 
-local EventFrame = CreateFrame("Frame")
-EventFrame:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
-EventFrame:RegisterEvent("QUEST_LOG_UPDATE")
-EventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-EventFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-EventFrame:SetScript("OnEvent", function(_, event, arg1)
-    if event == "NAME_PLATE_UNIT_REMOVED" then
-        ClearQuestCache(arg1)
-        return
-    end
-
-    ClearQuestCache()
-    if NS.RequestUpdateAll then
-        NS.RequestUpdateAll("quest_icon:" .. event, false, NS.REASON_QUEST or 1024)
-    elseif NS.ForceUpdateAll then
-        NS.ForceUpdateAll()
-    end
-end)
+NS.QuestIcon_ClearCache = ClearQuestCache
 
 NS.Modules.QuestIcon = {
     Update = Update,
@@ -204,6 +196,8 @@ NS.Modules.QuestIcon = {
             st.lastSize = nil
             st.lastX = nil
             st.lastY = nil
+            st.lastAlpha = nil
+            st.lastAnchor = nil
             st.lastParent = nil
         end
     end,

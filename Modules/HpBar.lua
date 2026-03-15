@@ -10,18 +10,16 @@ local function GetState(frame)
         lastH = nil,
         castKey = nil,
         lastAbsorbHide = nil,
-        lastHealHide   = nil,
-        lastColorR   = nil,
-        lastColorG   = nil,
-        lastColorB   = nil,
-        lastUnit       = nil,
-        combatRedUntil = 0,
+        lastHealHide = nil,
+        lastColorR = nil,
+        lastColorG = nil,
+        lastColorB = nil,
+        lastUnit = nil,
         applied = false,
     }
     State[frame] = st
     return st
 end
-
 
 local function CaptureOriginal(frame, st)
     if st._origCaptured then return end
@@ -30,8 +28,6 @@ local function CaptureOriginal(frame, st)
 
     st._origCaptured = true
 
-    -- НЕ читаем точки/размеры (GetPoint/GetSize) у nameplate StatusBar: это может дать taint/secret-number.
-    -- Сохраняем только то, что обычно безопасно: scale и текстуры.
     local okS, s = pcall(hb.GetScale, hb)
     if okS and s then
         st._origScale = s
@@ -48,10 +44,6 @@ local function CaptureOriginal(frame, st)
 end
 
 local function DisableCleanup(frame, st)
-    -- Откат при выключении модуля должен быть БЕЗОПАСНЫМ:
-    -- без измерений (GetPoint/GetSize) и без вызовов CompactUnitFrame_* на tainted фреймах.
-    --
-    -- Мы возвращаем только предсказуемую привязку healthBar к контейнеру и визуальные альфы.
     local hb = frame.healthBar
     if hb then
         local container = frame.HealthBarsContainer
@@ -83,6 +75,7 @@ local function DisableCleanup(frame, st)
     st.lastColorR = nil
     st.lastColorG = nil
     st.lastColorB = nil
+    st.lastUnit = nil
     st.applied = false
 end
 
@@ -92,7 +85,6 @@ local function ColorDiff(cr, cg, cb, r, g, b)
     return (math.abs(cr - r) > eps) or (math.abs(cg - g) > eps) or (math.abs(cb - b) > eps)
 end
 
--- Приводим значения из DB к "обычным" числам (избавляемся от возможных secret-number/taint через tostring->tonumber).
 local function SafeNumber(v, fallback)
     local n = tonumber(tostring(v))
     if not n then return fallback end
@@ -106,19 +98,12 @@ local function GetAlphaSafe(obj, fallback)
     return fallback
 end
 
--- Надежно прячет визуальные слои хпбара (текстуры/фон/оверлеи),
--- но НЕ трогает альфу самого healthBar фрейма и его детей (иначе можно скрыть чужие FontString'и, например имя).
--- Идея: оставляем hb как контейнер (alpha=1), а "картинку" прячем через альфу текстур.
 local function SetHealthBarVisualAlpha(frame, hb, a)
     if not hb then return end
 
-    -- Не меняем hb:SetAlpha(a) специально.
-
-    -- 1) Основная текстура статусбара
     local sbt = hb.GetStatusBarTexture and hb:GetStatusBarTexture()
     if sbt and sbt.SetAlpha then sbt:SetAlpha(a) end
 
-    -- 2) Регионы самого hb (только текстуры/маски)
     if hb.GetRegions then
         local regs = { hb:GetRegions() }
         for i = 1, #regs do
@@ -132,7 +117,6 @@ local function SetHealthBarVisualAlpha(frame, hb, a)
         end
     end
 
-    -- 3) Дети hb: не трогаем их alpha, прячем только их текстурные регионы/StatusBarTexture
     if hb.GetChildren then
         local children = { hb:GetChildren() }
         for i = 1, #children do
@@ -157,7 +141,6 @@ local function SetHealthBarVisualAlpha(frame, hb, a)
         end
     end
 
-    -- 4) Часто используемые алиасы у Blizzard/аддонов
     local extra = {
         frame and frame.healthBarBackground,
         frame and frame.healthBarBorder,
@@ -176,12 +159,8 @@ local function SetHealthBarVisualAlpha(frame, hb, a)
     end
 end
 
--- Основная логика цвета
-local function ComputeDesiredColor(frame, unit, db)
-    -- 1. Если выбран "Свой цвет" (Mode 2), возвращаем его сразу
-    -- (Игнорируем угрозу и прочее, если игрок захотел жестко задать цвет)
+local function ComputeBaseColor(unit, db)
     if db.healthColorMode == 2 then
-        -- Для NPC-вкладок: отдельные цвета для разных реакций
         local enemyNpcDB = NS.Config and NS.Config.GetTable and NS.Config.GetTable(NS.UNIT_TYPES.ENEMY_NPC)
         local friendlyNpcDB = NS.Config and NS.Config.GetTable and NS.Config.GetTable(NS.UNIT_TYPES.FRIENDLY_NPC)
 
@@ -208,87 +187,76 @@ local function ComputeDesiredColor(frame, unit, db)
         return c.r, c.g, c.b
     end
 
-    -- 2. Если режим не "Свой цвет" (Mode 1/3)
-    
-    local st = GetState(frame)
-    if st.lastUnit ~= unit then
-        st.lastUnit = unit
-        st.lastColorR = nil
-    st.lastColorG = nil
-    st.lastColorB = nil
-        st.combatRedUntil = 0
-    end
-
-    local isFriend = UnitIsFriend("player", unit)
-    local isPlayer = UnitIsPlayer(unit) or (UnitTreatAsPlayerForDisplay and UnitTreatAsPlayerForDisplay(unit))
-
-    -- -- Логика УГРОЗЫ (только для врагов и если это не игрок-игрок PVP, хотя в PVP угрозы нет)
-    -- Если ты хочешь отключить покраснение при агро, закомментируй блок ниже
-    if not isFriend and not isPlayer then
-        local canAttack = UnitCanAttack("player", unit)
-        if canAttack then
-            local reaction = UnitReaction(unit, "player")
-            local threat = UnitThreatSituation("player", unit)
-            local withMe = (threat ~= nil)
-            local inCombat = UnitAffectingCombat(unit)
-
-            local now = GetTime()
-            if reaction == 4 then
-                -- Нейтралы: красим ТОЛЬКО если юнит реально в бою с игроком (есть threat в таблице).
-                if withMe then
-                    st.combatRedUntil = now + 0.25
-                end
-            else
-                -- Остальные враги: оставляем старое поведение (в бою вообще или с игроком).
-                if inCombat or withMe then
-                    st.combatRedUntil = now + 0.25
-                end
-            end
-
-            -- Если есть агро/бой с игроком, красим в красный
-            if now < (st.combatRedUntil or 0) then
-                return 1, 0.1, 0.1 -- Красный цвет угрозы
-            end
-        end
-    end
-    -- -- Конец логики угрозы
-
-    -- Mode 3: Реакция (включая игроков)
     if db.healthColorMode == 3 then
         return UnitSelectionColor(unit)
     end
 
-    -- Mode 1: Авто (игроки: класс, NPC: реакция)
+    local isPlayer = UnitIsPlayer(unit) or (UnitTreatAsPlayerForDisplay and UnitTreatAsPlayerForDisplay(unit))
     if isPlayer then
         local _, class = UnitClass(unit)
         if class then
             local c = C_ClassColor.GetClassColor(class)
             if c then return c.r, c.g, c.b end
         end
-        return 0.5, 0.5, 0.5 -- серый если ошибка
+        return 0.5, 0.5, 0.5
     end
 
-    -- NPC -> реакция
     return UnitSelectionColor(unit)
 end
 
-local function ApplyHealthColor(frame, unit, db)
+local function GetThreatOverrideColor(unit, gdb)
+    if not unit or not gdb then return nil end
+    if UnitIsFriend("player", unit) then return nil end
+    if UnitIsPlayer(unit) or (UnitTreatAsPlayerForDisplay and UnitTreatAsPlayerForDisplay(unit)) then return nil end
+    if not UnitCanAttack("player", unit) then return nil end
+
+    local state = NS.Threat and NS.Threat.GetPlayerState and NS.Threat.GetPlayerState(unit)
+    if state == nil or state == NS.Threat.STATE_NONE then
+        return nil
+    end
+
+    if gdb.tankModeEnable then
+        local c = (state == NS.Threat.STATE_ONME) and gdb.tankModePlayerAggroColor or gdb.tankModeOffTankColor
+        if c then
+            return c.r, c.g, c.b
+        end
+        return nil
+    end
+
+    return 1, 0.1, 0.1
+end
+
+local function ComputeDesiredColor(frame, unit, db, gdb)
+    local st = GetState(frame)
+    if st.lastUnit ~= unit then
+        st.lastUnit = unit
+        st.lastColorR = nil
+        st.lastColorG = nil
+        st.lastColorB = nil
+    end
+
+    local r, g, b = GetThreatOverrideColor(unit, gdb)
+    if r ~= nil then
+        return r, g, b
+    end
+
+    return ComputeBaseColor(unit, db)
+end
+
+local function ApplyHealthColor(frame, unit, db, gdb)
     local hb = frame and frame.healthBar
     if not hb then return end
-    
-    -- Если db не передан (например, вызов из хука), пытаемся найти его
-    if not db then
-        db = NS.GetUnitConfig(unit)
+
+    if not db or not gdb then
+        db, gdb = NS.GetUnitConfig(unit)
     end
     if not db then return end
 
     local st = GetState(frame)
-
-    local r, g, b = ComputeDesiredColor(frame, unit, db)
+    local r, g, b = ComputeDesiredColor(frame, unit, db, gdb)
     if not r then return end
 
     local cr, cg, cb = hb:GetStatusBarColor()
-
     if st.lastColorR ~= r or st.lastColorG ~= g or st.lastColorB ~= b or ColorDiff(cr, cg, cb, r, g, b) then
         hb:SetStatusBarColor(r, g, b)
         st.lastColorR, st.lastColorG, st.lastColorB = r, g, b
@@ -302,13 +270,10 @@ local function ApplyGeometry(frame, db, st)
     local w = SafeNumber(db.plateWidth, 140)
     local h = SafeNumber(db.plateHeight, 8)
 
-    -- разумные пределы, чтобы не ломать лейаут
     if w < 40 then w = 40 elseif w > 400 then w = 400 end
     if h < 2 then h = 2 elseif h > 60 then h = 60 end
 
     if st.lastW ~= w or st.lastH ~= h then
-        local container = frame.HealthBarsContainer or frame
-
         hb:ClearAllPoints()
         hb:SetPoint("CENTER", frame, "CENTER", 0, 2)
         hb:SetSize(w, h)
@@ -322,7 +287,6 @@ local function ApplyGeometry(frame, db, st)
         st.applied = true
     end
 
-    -- Подстраиваем контейнер кастбара по ширине и привязываем к healthBar
     if frame.CastBarContainer then
         local cbKey = w
         if st.castKey ~= cbKey then
@@ -348,10 +312,8 @@ local function ApplyAbsorbHealToggles(frame, gdb, st)
         end
     end
 
-    -- Эти настройки теперь в Глобальных (gdb)
     local hideAbsorb = gdb and gdb.hideAbsorbGlow and true or false
     local aAbsorb = hideAbsorb and 0 or 1
-    -- Blizzard может вернуть альфу в 1 при пересборке/апдейте фрейма, поэтому проверяем фактическую альфу
     if st.lastAbsorbHide ~= hideAbsorb
         or (hb.overAbsorbGlow and hb.overAbsorbGlow:GetAlpha() ~= aAbsorb)
         or (hb.overHealAbsorbGlow and hb.overHealAbsorbGlow:GetAlpha() ~= aAbsorb) then
@@ -374,18 +336,28 @@ local function ApplyAbsorbHealToggles(frame, gdb, st)
         st.lastHealHide = hideHeal
     end
 end
--- Хук для защиты от того, что Blizzard пытается перекрасить хпбар обратно
+
 local function PostBlizzRecolor(frame)
     if not frame or frame:IsForbidden() then return end
     local unit = frame.unit
     if not unit or not unit:find("nameplate") then return end
-    
+
     local db, gdb = NS.GetUnitConfig(unit)
-    -- Проверяем и общий профиль, и master-toggle полосы здоровья
-    if db and db.enabled and db.hpBarEnable then 
-        ApplyHealthColor(frame, unit, db)
-        ApplyAbsorbHealToggles(frame, gdb, GetState(frame))
+    if not (db and db.enabled and db.hpBarEnable) then return end
+
+    local st = GetState(frame)
+    if st.lastUnit ~= unit then return end
+    if st.lastColorR == nil or st.lastColorG == nil or st.lastColorB == nil then return end
+
+    local hb = frame.healthBar
+    if not hb then return end
+
+    local cr, cg, cb = hb:GetStatusBarColor()
+    if ColorDiff(cr, cg, cb, st.lastColorR, st.lastColorG, st.lastColorB) then
+        hb:SetStatusBarColor(st.lastColorR, st.lastColorG, st.lastColorB)
     end
+
+    ApplyAbsorbHealToggles(frame, gdb, st)
 end
 
 if _G.CompactUnitFrame_UpdateHealthColor then
@@ -395,20 +367,12 @@ if _G.CompactUnitFrame_UpdateThreatColor then
     hooksecurefunc("CompactUnitFrame_UpdateThreatColor", PostBlizzRecolor)
 end
 
--- ГЛАВНАЯ ФУНКЦИЯ МОДУЛЯ
--- frame: фрейм неймплейта
--- unit: unitID
--- db: настройки этого типа существ (BlizzPlatesFixDB.Units.EnemyPlayer и т.д.)
--- gdb: глобальные настройки (BlizzPlatesFixDB.Global)
 NS.Modules.HpBar = {
     Update = function(frame, unit, db, gdb)
         if not frame or frame:IsForbidden() then return end
         if not frame.healthBar then return end
-
         if not db then return end
 
-        -- Master-toggle: отключаем настройки вкладки и делаем хпбар полностью невидимым
-        -- (включая фон/слои/детей), но не Hide() всего фрейма (меньше рисков для якорей).
         local st = GetState(frame)
         if db.hpBarEnable == false then
             local hb = frame.healthBar
@@ -425,13 +389,11 @@ NS.Modules.HpBar = {
             if frame.myHealPrediction then frame.myHealPrediction:SetAlpha(0) end
             if frame.otherHealPrediction then frame.otherHealPrediction:SetAlpha(0) end
             if frame.selectionHighlight then frame.selectionHighlight:SetAlpha(0) end
-            
-            -- Обязательно применяем геометрию, так как HpBar - это якорь для NameText и CastBar!
+
             ApplyGeometry(frame, db, st)
             return
         end
 
-        -- если ранее прятали мастер-тогглом — восстановим исходные альфы
         if st._hpForcedHidden then
             st._hpForcedHidden = false
             local hb = frame.healthBar
@@ -444,21 +406,15 @@ NS.Modules.HpBar = {
         end
 
         CaptureOriginal(frame, st)
-
-        -- Дальше применяем геометрию/цвет/прогнозы как обычно
-
         ApplyGeometry(frame, db, st)
-
-        ApplyHealthColor(frame, unit, db)
+        ApplyHealthColor(frame, unit, db, gdb)
         ApplyAbsorbHealToggles(frame, gdb, st)
     end,
+
     Reset = function(frame)
         local st = GetState(frame)
-        
-        -- Вызываем вашу родную функцию очистки геометрии
         DisableCleanup(frame, st)
-        
-        -- Передаем управление цветом обратно движку Blizzard
+
         if _G.CompactUnitFrame_UpdateHealthColor and frame.unit then
             _G.CompactUnitFrame_UpdateHealthColor(frame)
         end

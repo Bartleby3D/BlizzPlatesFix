@@ -16,6 +16,8 @@ local function GetState(frame)
         lastX = nil,
         lastY = nil,
         lastMirror = nil,
+        lastAlpha = nil,
+        lastAnchor = nil,
         lastBlizzShown = nil,
     }
     State[frame] = st
@@ -156,10 +158,17 @@ local function UpdateIcon(frame, unit, db, gdb)
 
     local offX = gdb.classifX or 0
     local offY = gdb.classifY or 0
-    if st.lastX ~= offX or st.lastY ~= offY then
-        icon:ClearAllPoints()
-        icon:SetPoint("CENTER", frame.healthBar, "CENTER", offX, offY)
+    local anchor = gdb.classifAnchor or "HpBar"
+    if st.lastX ~= offX or st.lastY ~= offY or st.lastAnchor ~= anchor then
+        st.lastAnchor = NS.ApplyStatusIconAnchor(icon, frame, anchor, offX, offY)
         st.lastX, st.lastY = offX, offY
+    end
+
+    local alpha = gdb.classifAlpha
+    if alpha == nil then alpha = 1 end
+    if st.lastAlpha ~= alpha then
+        icon:SetAlpha(alpha)
+        st.lastAlpha = alpha
     end
 
     local mirror = gdb.classifMirror and true or false
@@ -183,6 +192,8 @@ NS.Modules.Icon = {
             frame.BPF_ClassIcon:Hide()
         end
         st.lastVisible = false
+        st.lastAlpha = nil
+        st.lastAnchor = nil
         st.lastBlizzShown = nil
         if st.hiddenBlizz and frame.ClassificationFrame then
             frame.ClassificationFrame:SetParent(frame)

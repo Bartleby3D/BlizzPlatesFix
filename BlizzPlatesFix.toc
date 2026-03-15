@@ -2,7 +2,7 @@
 ## Title: BlizzPlatesFix
 ## Notes: Modular NamePlates
 ## Author: Archer#2848
-## Version: 1.0.2
+## Version: 1.0.3
 ## SavedVariables: BlizzPlatesFixDB
 ## IconTexture: Interface\AddOns\BlizzPlatesFix\Media\BPFIcon.tga
 ## X-License: All Rights Reserved
@@ -37,6 +37,7 @@ Core\Runner.lua
 Database.lua
 Core\Profiles.lua
 Core\Utils.lua
+Core\Threat.lua
 Core\NamePlateCache.lua
 
 Modules\CVars.lua
@@ -45,6 +46,7 @@ Modules\HpBar.lua
 Modules\Icon.lua
 Modules\FactionIcon.lua
 Modules\QuestIcon.lua
+Modules\RaidTargetIcon.lua
 Modules\AurasData.lua
 Modules\Auras.lua
 Modules\AurasPreview.lua

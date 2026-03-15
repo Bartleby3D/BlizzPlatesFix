@@ -43,8 +43,8 @@ function NS.InitMinimapIcon()
         function NS.LDB:OnTooltipShow()
             if not self or not self.AddLine then return end
             self:AddLine("BlizzPlatesFix")
-            self:AddLine("Left Click: Toggle", 1, 1, 1)
-            self:AddLine("Right Click: Toggle", 1, 1, 1)
+            self:AddLine(NS.L("Left Click: Toggle"), 1, 1, 1)
+            self:AddLine(NS.L("Right Click: Toggle"), 1, 1, 1)
         end
     end
 

@@ -36,7 +36,7 @@ local ContentInner
 local ScrollBar
 
 local MainTabs = { NS.L("General"), NS.L("Friendly Players"), NS.L("Friendly NPC"), NS.L("Hostile Players"), NS.L("Hostile NPC"), NS.L("Profiles") }
-local GeneralSubTabs = { NS.L("Engine"), NS.L("Status & Effects") }
+local GeneralSubTabs = { NS.L("Engine"), NS.L("Status"), NS.L("Effects") }
 NS.SubTabs = { NS.L("Health bar"), NS.L("Name text"), NS.L("Health text"), NS.L("Show level"), NS.L("Target indicator"), NS.L("Castbar"), NS.L("Buffs"), NS.L("Debuffs"), NS.L("Crowd Control (CC)") }
 
 local function ClearContainer()

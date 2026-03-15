@@ -1,7 +1,8 @@
 local _, NS = ...
 
 -- =============================================================
--- CONFIG: единственная точка доступа к SavedVariables (BlizzPlatesFixDB)
+-- CONFIG: runtime-access layer for the active profile.
+-- Root DB initialization/defaults/profile management live in DB/Profiles.
 -- =============================================================
 
 NS.Config = NS.Config or {}

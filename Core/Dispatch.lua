@@ -112,6 +112,9 @@ function Dispatch.HandleEvent(event, arg1, arg2, ...)
         if NS.ClearUnitConfigCache then
             NS.ClearUnitConfigCache(arg1)
         end
+        if NS.QuestIcon_ClearCache then
+            NS.QuestIcon_ClearCache(arg1)
+        end
         return
     end
 
@@ -142,6 +145,19 @@ end
 
 if event == "PLAYER_TARGET_CHANGED" then
     RequestAllUpdate(event, false, NS.REASON_ALL)
+    return
+end
+
+if event == "RAID_TARGET_UPDATE" then
+    RequestAllUpdate(event, true, NS.REASON_TARGET or 64)
+    return
+end
+
+if event == "QUEST_LOG_UPDATE" or event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then
+    if NS.QuestIcon_ClearCache then
+        NS.QuestIcon_ClearCache()
+    end
+    RequestAllUpdate(event, false, NS.REASON_QUEST or 1024)
     return
 end
 

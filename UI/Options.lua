@@ -363,7 +363,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
             }
             if dbContext == NS.UNIT_TYPES.ENEMY_PLAYER or dbContext == NS.UNIT_TYPES.ENEMY_NPC then
                 Add("dropdown", NS.L("Buff filter"), nil, "buffsEnemyFilterMode", nil, nil, nil, buffFilterEnemy, 1)
-                Add("checkbox", NS.L("Highlight: dispellable/stealable buff (Purge/Spellsteal)"), nil, "buffsPurgeGlow", nil, nil, nil, nil, 1)
+                Add("checkbox", NS.L("Highlight: dispellable/stealable buff"), nil, "buffsPurgeGlow", nil, nil, nil, nil, 1)
             end
 
             if dbContext == NS.UNIT_TYPES.FRIENDLY_PLAYER or dbContext == NS.UNIT_TYPES.FRIENDLY_NPC then
@@ -616,15 +616,19 @@ function NS.Options.GetTable(mainIdx, subIdx)
         end
 
         if subIdx == 2 then
+            local iconAnchorList = { { text = NS.L("HpBar (Center, Center)"), value = "HpBar" }, { text = NS.L("Name (Center, Top)"), value = "Name" } }
             Add("vline", nil, nil, nil, nil, nil, nil, nil, 1, {size=550, offX=25, offY=0})
             Add("header", NS.L("|cff00aaffIcon(|r|cff9d9d9dRare|r/|cffffd700Elite|r/|cffff0000Boss|r|cff00aaff)|r"), nil, nil, nil, nil, nil, nil, 1)
             Add("checkbox", NS.L("Enable"), nil, "classifEnabled", nil, nil, nil, nil, 1)
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = -5})
             Add("checkbox", NS.L("Hide on friendly"), nil, "classifHideAllies", nil, nil, nil, nil, 1, {offX=20})
-            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -10})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = -10})
             Add("checkbox", NS.L("Bosses and rares only"), nil, "classifShowBossRareOnly", nil, nil, nil, nil, 1, {offX=20})
-            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -10})            Add("slider", NS.L("Size"), nil, "classifScale", 0.5, 3, 0.1, nil, 1, {offX=20})
+            Add("slider", NS.L("Size"), nil, "classifScale", 0.5, 3, 0.1, nil, 1, {offX=20})
             Add("slider", NS.L("Offset X"), nil, "classifX", -150, 150, 0.5, nil, 1, {offX=20})
             Add("slider", NS.L("Offset Y"), nil, "classifY", -150, 150, 0.5, nil, 1, {offX=20})
+            Add("slider", NS.L("Opacity"), nil, "classifAlpha", 0, 1, 0.1, nil, 1, {offX=20})
+            Add("dropdown", NS.L("Anchor"), nil, "classifAnchor", nil, nil, nil, iconAnchorList, 1, {offX=20})
             Add("checkbox", NS.L("Mirror icon"), nil, "classifMirror", nil, nil, nil, nil, 1, {offX=20})
 
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 10})
@@ -637,26 +641,55 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("slider", NS.L("Size"), nil, "factionIconSize", 8, 40, 1, nil, 1, {offX=20})
             Add("slider", NS.L("Offset X"), nil, "factionIconX", -150, 150, 0.5, nil, 1, {offX=20})
             Add("slider", NS.L("Offset Y"), nil, "factionIconY", -150, 150, 0.5, nil, 1, {offX=20})
+            Add("slider", NS.L("Opacity"), nil, "factionIconAlpha", 0, 1, 0.1, nil, 1, {offX=20})
+            local factionIconStyleList = {
+                { text = NS.L("Classic icons"), value = 1 },
+                { text = NS.L("Symbols"), value = 2 },
+                { text = NS.L("Modern icons"), value = 3 },
+            }
+            Add("dropdown", NS.L("Style"), nil, "factionIconStyle", nil, nil, nil, factionIconStyleList, 1, {offX=20})
+            Add("dropdown", NS.L("Anchor"), nil, "factionIconAnchor", nil, nil, nil, iconAnchorList, 1, {offX=20})
 
-            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 10})
             Add("header", NS.L("Quest objective icon"), nil, nil, nil, nil, nil, nil, 2)
             Add("checkbox", NS.L("Enable"), nil, "questIconEnabled", nil, nil, nil, nil, 2)
             Add("slider", NS.L("Size"), nil, "questIconSize", 8, 40, 1, nil, 2, {offX=20})
             Add("slider", NS.L("Offset X"), nil, "questIconX", -150, 150, 0.5, nil, 2, {offX=20})
             Add("slider", NS.L("Offset Y"), nil, "questIconY", -150, 150, 0.5, nil, 2, {offX=20})
+            Add("slider", NS.L("Opacity"), nil, "questIconAlpha", 0, 1, 0.1, nil, 2, {offX=20})
+            Add("dropdown", NS.L("Anchor"), nil, "questIconAnchor", nil, nil, nil, iconAnchorList, 2, {offX=20})
 
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 10})
             Add("separator", nil, nil, nil, nil, nil, nil, nil, 2, {size=260, offY=8})
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 5})
 
-            Add("header", NS.L("Opacity settings"), nil, nil, nil, nil, nil, nil, 2)
-            Add("checkbox", NS.L("Enable"), nil, "transparencyEnabled", nil, nil, nil, nil, 2)
-            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -5})
-            Add("checkbox", NS.L("Style: No distance"), nil, "transparencyMode", nil, nil, nil, nil, 2, {offX=20, group="TransparencyStyle", val=1, onChange=function() if NS.RefreshGUI then NS.RefreshGUI() end end})
-            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -10})
-            Add("checkbox", NS.L("Style: By distance"), nil, "transparencyMode", nil, nil, nil, nil, 2, {offX=20, group="TransparencyStyle", val=2, onChange=function() if NS.RefreshGUI then NS.RefreshGUI() end end})
-            Add("slider", NS.L("Opacity"), nil, "transparencyAlpha", 0, 1, 0.1, nil, 2, {offX=20})
-            Add("slider", NS.L("Range (yards)"), nil, "transparencyRange", 5, 60, 1, nil, 2, {offX=20, requires={key="transparencyMode", value=2}})
+            Add("header", NS.L("Raid target icon"), nil, nil, nil, nil, nil, nil, 2)
+            Add("checkbox", NS.L("Enable"), nil, "raidTargetIconEnabled", nil, nil, nil, nil, 2)
+            Add("slider", NS.L("Size"), nil, "raidTargetIconSize", 8, 60, 1, nil, 2, {offX=20})
+            Add("slider", NS.L("Offset X"), nil, "raidTargetIconX", -150, 150, 0.5, nil, 2, {offX=20})
+            Add("slider", NS.L("Offset Y"), nil, "raidTargetIconY", -150, 150, 0.5, nil, 2, {offX=20})
+            Add("slider", NS.L("Opacity"), nil, "raidTargetIconAlpha", 0, 1, 0.1, nil, 2, {offX=20})
+            Add("dropdown", NS.L("Anchor"), nil, "raidTargetIconAnchor", nil, nil, nil, iconAnchorList, 2, {offX=20})
+        end
+
+        if subIdx == 3 then
+            Add("vline", nil, nil, nil, nil, nil, nil, nil, 1, {size=550, offX=25, offY=0})
+            Add("header", NS.L("Opacity settings"), nil, nil, nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Enable"), nil, "transparencyEnabled", nil, nil, nil, nil, 1)
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = -5})
+            Add("checkbox", NS.L("Style: No distance"), nil, "transparencyMode", nil, nil, nil, nil, 1, {offX=20, group="TransparencyStyle", val=1, onChange=function() if NS.RefreshGUI then NS.RefreshGUI() end end})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = -10})
+            Add("checkbox", NS.L("Style: By distance"), nil, "transparencyMode", nil, nil, nil, nil, 1, {offX=20, group="TransparencyStyle", val=2, onChange=function() if NS.RefreshGUI then NS.RefreshGUI() end end})
+            Add("slider", NS.L("Opacity"), nil, "transparencyAlpha", 0, 1, 0.1, nil, 1, {offX=20})
+            Add("slider", NS.L("Range (yards)"), nil, "transparencyRange", 5, 60, 1, nil, 1, {offX=20, requires={key="transparencyMode", value=2}})
+
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 10})
+            Add("separator", nil, nil, nil, nil, nil, nil, nil, 1, {size=260, offY=8})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
+
+            Add("header", NS.L("Tank mode"), nil, nil, nil, nil, nil, nil, 2)
+            Add("checkbox", NS.L("Enable"), nil, "tankModeEnable", nil, nil, nil, nil, 2)
+            Add("color", NS.L("Color: Aggro on you"), nil, "tankModePlayerAggroColor", nil, nil, nil, nil, 2, {offX=20})
+            Add("color", NS.L("Color: Aggro not on you"), nil, "tankModeOffTankColor", nil, nil, nil, nil, 2, {offX=20})
 
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 10})
             Add("separator", nil, nil, nil, nil, nil, nil, nil, 2, {size=260, offY=8})

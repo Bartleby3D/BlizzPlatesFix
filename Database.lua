@@ -45,26 +45,44 @@ NS.DB.globalDefaults = {
     classifScale = 1.2,
     classifX = -70,
     classifY = 0,
+    classifAlpha = 1,
+    classifAnchor = "HpBar",
     classifMirror = true,
     
     
     -- Иконка фракции (Alliance/Horde)
     factionIconEnabled = true,
     factionIconOnlyPlayers = true,
-    factionIconSize = 25,
-    factionIconX = -70,
-    factionIconY = -5,
+    factionIconSize = 20,
+    factionIconX = -73,
+    factionIconY = 0,
+    factionIconAlpha = 1,
+    factionIconAnchor = "HpBar",
+    factionIconStyle = 2,
 
     -- Quest objective icon
     questIconEnabled = true,
-    questIconSize = 25,
+    questIconSize = 20,
     questIconX = -77,
     questIconY = 0,
+    questIconAlpha = 1,
+    questIconAnchor = "HpBar",
+
+    -- Raid target icon
+    raidTargetIconEnabled = true,
+    raidTargetIconSize = 20,
+    raidTargetIconX = 0,
+    raidTargetIconY = 5,
+    raidTargetIconAlpha = 1,
+    raidTargetIconAnchor = "Name",
 
     -- Доп эффекты
     hideAbsorbGlow = true,
     hideHealPrediction = true,
     hideCastShield = true,
+    tankModeEnable = false,
+    tankModePlayerAggroColor = {r=1, g=0.65, b=0.15},
+    tankModeOffTankColor = {r=1, g=0.1, b=0.1},
     -- Combat: immediate full refresh on entering combat (can cause CPU spike in mass pulls)
     forceUpdateAllOnCombat = true,
 
@@ -143,7 +161,7 @@ NS.DB.unitDefaults = {
     levelEnable = true,
     levelFontSize = 10,
     levelFontOutline = "SHADOW",
-    levelX = -1, levelY = 0,
+    levelX = -2, levelY = 0.5,
     levelAnchor = "RIGHT",
     levelColorMode = 1, -- 1=Сложность, 2=Свой цвет
     levelColor = {r=1, g=1, b=1},

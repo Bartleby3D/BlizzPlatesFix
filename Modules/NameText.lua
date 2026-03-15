@@ -38,10 +38,12 @@ local function EnsureFontString(frame, st)
 
     local parent = frame.healthBar or frame
     st.wrapper = CreateFrame("Frame", nil, parent)
+    frame.BPF_NameTextWrapper = st.wrapper
     st.wrapper:Hide()
     st.wrapper:SetSize(1, 1)
 
     st.fs = st.wrapper:CreateFontString(nil, "OVERLAY", nil, 7)
+    frame.BPF_NameTextFS = st.fs
     st.fs:Hide()
 
     if st.fs.SetIgnoreParentScale then
@@ -95,7 +97,7 @@ local function GetUnitColor(unit, db)
         if reaction == 4 and UnitCanAttack("player", unit) then
             local threat = UnitThreatSituation("player", unit)
             if threat ~= nil then
-                return 1, 0.2, 0.2
+                return 1, 0.1, 0.1
             end
         end
         return UnitSelectionColor(unit)
@@ -114,7 +116,7 @@ local function GetUnitColor(unit, db)
         if reaction == 4 and UnitCanAttack("player", unit) then
             local threat = UnitThreatSituation("player", unit)
             if threat ~= nil then
-                return 1, 0.2, 0.2
+                return 1, 0.1, 0.1
             end
         end
         return UnitSelectionColor(unit)
@@ -172,6 +174,8 @@ local function ApplyStyle(frame, st, unit, db, gdb)
     if not db.nameEnable then
         if st.fs then st.fs:Hide() end
         if st.wrapper then st.wrapper:Hide() end
+        frame.BPF_NameTextWrapper = st.wrapper
+        frame.BPF_NameTextFS = st.fs
         SetBlizzBlocked(frame, false)
         st.lastShown = nil
         st.lastPointAlignH = nil
@@ -271,6 +275,8 @@ local function ApplyStyle(frame, st, unit, db, gdb)
         st.lastPointY = offY
     end
 
+    frame.BPF_NameTextWrapper = st.wrapper
+    frame.BPF_NameTextFS = fs
 
     if st.wrapper and st.lastFsAnchorKey ~= alignH then
         fs:ClearAllPoints()
@@ -314,6 +320,11 @@ local function ApplyStyle(frame, st, unit, db, gdb)
 end
 
 NS.Modules.NameText = {
+    Init = function(frame)
+        if not frame or frame:IsForbidden() then return end
+        local st = GetState(frame)
+        EnsureFontString(frame, st)
+    end,
     Update = function(frame, unit, db, gdb)
         if not frame or frame:IsForbidden() then return end
         if not frame.healthBar then return end
