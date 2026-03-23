@@ -2,29 +2,42 @@ local _, NS = ...
 
 NS.MenuState = NS.MenuState or {}
 
-local unitSubTabKeys = {
+local playerUnitSubTabKeys = {
     -- Полоса здоровья
     [1] = "hpBarEnable",
     [2] = "nameEnable", -- Текст имени
-    [3] = "hpTextEnable", -- Текст здоровья
-    [4] = "levelEnable", -- Уровень
-    [5] = "targetIndicatorEnable", -- Индикация цели (master)
-    [6] = "cbEnabled", -- Кастбар
+    [3] = "guildTextEnable", -- Текст гильдии
+    [4] = "hpTextEnable", -- Текст здоровья
+    [5] = "levelEnable", -- Уровень
+    [6] = "targetIndicatorEnable", -- Индикация цели (master)
+    [7] = "cbEnabled", -- Кастбар
 
     -- Ауры (разбито на 3 подвкладки)
-    [7] = "buffsEnable",   -- Баффы
-    [8] = "debuffsEnable", -- Дебаффы
-    [9] = "ccEnable",      -- Контроль (CC)
+    [8] = "buffsEnable",   -- Баффы
+    [9] = "debuffsEnable", -- Дебаффы
+    [10] = "ccEnable",      -- Контроль (CC)
 }
 
+local npcUnitSubTabKeys = {
+    [1] = "hpBarEnable",
+    [2] = "nameEnable",
+    [3] = "###",
+    [4] = "hpTextEnable",
+    [5] = "levelEnable",
+    [6] = "targetIndicatorEnable",
+    [7] = "cbEnabled",
+    [8] = "buffsEnable",
+    [9] = "debuffsEnable",
+    [10] = "ccEnable",
+}
 
 -- Карта "master-enable" ключей для тумблеров слева у подвкладок (на тип юнита)
 -- Храним в NS.SubTabEnableKeys[mainTabIndex][subTabIndex] = key
 NS.SubTabEnableKeys = NS.SubTabEnableKeys or {
-    [2] = unitSubTabKeys, -- Friendly Player
-    [3] = unitSubTabKeys, -- Friendly NPC
-    [4] = unitSubTabKeys, -- Enemy Player
-    [5] = unitSubTabKeys, -- Enemy NPC
+    [2] = playerUnitSubTabKeys, -- Friendly Player
+    [3] = npcUnitSubTabKeys, -- Friendly NPC
+    [4] = playerUnitSubTabKeys, -- Enemy Player
+    [5] = npcUnitSubTabKeys, -- Enemy NPC
 }
 
 local MainFrame
@@ -36,8 +49,8 @@ local ContentInner
 local ScrollBar
 
 local MainTabs = { NS.L("General"), NS.L("Friendly Players"), NS.L("Friendly NPC"), NS.L("Hostile Players"), NS.L("Hostile NPC"), NS.L("Profiles") }
-local GeneralSubTabs = { NS.L("Engine"), NS.L("Status"), NS.L("Effects") }
-NS.SubTabs = { NS.L("Health bar"), NS.L("Name text"), NS.L("Health text"), NS.L("Show level"), NS.L("Target indicator"), NS.L("Castbar"), NS.L("Buffs"), NS.L("Debuffs"), NS.L("Crowd Control (CC)") }
+local GeneralSubTabs = { NS.L("Engine"), NS.L("Status"), NS.L("Effects"), NS.L("Support") }
+NS.SubTabs = { NS.L("Health bar"), NS.L("Name text"), NS.L("Guild text"), NS.L("Health text"), NS.L("Show level"), NS.L("Target indicator"), NS.L("Castbar"), NS.L("Buffs"), NS.L("Debuffs"), NS.L("Crowd Control (CC)") }
 
 local function ClearContainer()
     if not ContentInner then return end

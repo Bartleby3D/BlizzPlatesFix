@@ -140,7 +140,7 @@ local function UpdateHpText(frame, unit, db, gdb)
 
     local st = GetState(frame)
 
-    local simplifiedHidden = NS.IsSimplifiedNotTarget(frame, unit)
+    local simplifiedHidden = NS.ShouldHideModuleOnSimplified("HpText", frame, unit)
     if simplifiedHidden then
         if frame.BPF_ValueText then
             frame.BPF_ValueText:Hide()

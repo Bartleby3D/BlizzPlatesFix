@@ -8,7 +8,6 @@ local function GetState(frame)
     if st then return st end
     st = {
         lastVisible = nil,
-        lastBlizzShown = nil,
         lastFontPath = nil,
         lastFontSize = nil,
         lastFontFlag = nil,
@@ -41,6 +40,14 @@ local function UpdateLevel(frame, unit, db, gdb)
 
     local st = GetState(frame)
     local levelText = GetMyLevelText(frame)
+
+    if NS.ShouldHideModuleOnSimplified("Level", frame, unit) then
+        if st.lastVisible ~= false then
+            levelText:Hide()
+            st.lastVisible = false
+        end
+        return
+    end
     
     -- Если модуль выключен
     if not db.levelEnable then
@@ -51,18 +58,6 @@ local function UpdateLevel(frame, unit, db, gdb)
         return
     end
 
-    local blizzName = frame.name or (frame.UnitFrame and frame.UnitFrame.name)
-    local blizzShown = (not blizzName) or blizzName:IsShown()
-    if st.lastBlizzShown ~= blizzShown then
-        st.lastBlizzShown = blizzShown
-    end
-    if not blizzShown then
-        if st.lastVisible ~= false then
-            levelText:Hide()
-            st.lastVisible = false
-        end
-        return
-    end
 
     local classif = UnitClassification(unit)
     if classif == "minus" or classif == "trivial" then

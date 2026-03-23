@@ -73,15 +73,6 @@ NS.SafeBool = SafeBool
 NS.SafeValue = SafeValue
 
 
-local UnitConfigCache = {}
-function NS.ClearUnitConfigCache(unit)
-    if unit then
-        UnitConfigCache[unit] = nil
-        return
-    end
-    for k in pairs(UnitConfigCache) do UnitConfigCache[k] = nil end
-end
-
 -- ГЛАВНАЯ НОВАЯ ФУНКЦИЯ: Определение типа конфига для юнита
 function NS.GetUnitConfig(unit)
     if not unit then return nil, nil end
@@ -148,6 +139,21 @@ function NS.IsSimplifiedNotTarget(frame, unit)
         return true
     end
     return false
+end
+
+local SimplifiedHiddenModules = {
+    NameText = true,
+    GuildText = true,
+    HpText = true,
+    Level = true,
+    Icon = true,
+}
+
+function NS.ShouldHideModuleOnSimplified(moduleName, frame, unit)
+    if not moduleName or not SimplifiedHiddenModules[moduleName] then
+        return false
+    end
+    return NS.IsSimplifiedNotTarget(frame, unit)
 end
 
 

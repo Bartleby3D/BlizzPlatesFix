@@ -80,6 +80,29 @@ NS.DB.globalDefaults = {
     hideAbsorbGlow = true,
     hideHealPrediction = true,
     hideCastShield = true,
+
+    classResourceEnabled = false,
+    classResourceStyle = 1,
+    classResourceOnlyInCombat = false,
+    classResourceHideOnTransport = false,
+    classResourceAnchorMode = 1,
+
+    classResourceShowEmpty = true,
+    classResourceReverseFill = false,
+    classResourceWidth = 16,
+    classResourceHeight = 8,
+    classResourceSpacing = 2,
+    classResourceOffsetX = 0,
+    classResourceOffsetY = 0,
+    classResourceInactiveAlpha = 0.3,
+
+    classResourceModernScale = 1,
+    classResourceModernSpacing = 0,
+    classResourceModernOffsetX = 0,
+    classResourceModernOffsetY = 0,
+    classResourceModernInactiveAlpha = 0.3,
+
+    rpSupportEnabled = false,
     tankModeEnable = false,
     tankModePlayerAggroColor = {r=1, g=0.65, b=0.15},
     tankModeOffTankColor = {r=1, g=0.1, b=0.1},
@@ -91,6 +114,7 @@ NS.DB.globalDefaults = {
     copyProfileDest   = NS.UNIT_TYPES.ENEMY_PLAYER,
     copySec_HPBAR = false,
     copySec_NAME = false,
+    copySec_GUILD = false,
     copySec_HPTEXT = false,
     copySec_LEVEL = false,
     copySec_TARGET = false,
@@ -131,6 +155,7 @@ NS.DB.unitDefaults = {
     -- Имя
     nameEnable = true,
     nameDisableTargetScale = true,
+    nameShowPlayerTitle = false,
     fontScale = 8,
     fontOutline = "SHADOW",
     textX = 0, textY = 5,
@@ -146,6 +171,15 @@ NS.DB.unitDefaults = {
     nameColorHostile  = {r=1, g=1, b=1}, -- Враждебный (EnemyNPC)
     nameColorFriendly = {r=1, g=1, b=1}, -- Союзник (FriendlyNPC)
 
+    -- Текст гильдии
+    guildTextEnable = false,
+    guildTextMode = "UNDER_NAME",
+    guildTextFontSize = 7,
+    guildTextOutline = "SHADOW",
+    guildTextX = 0, guildTextY = -2,
+    guildTextAlign = "CENTER",
+    guildTextWidth = 135,
+    guildTextColor = {r=0.2, g=0.85, b=0.35},
 
     -- Текст ХП
     hpTextEnable = true,
@@ -350,9 +384,19 @@ NS.DB.CopySectionRules = {
         keys = {
             "nameEnable",
             "nameDisableTargetScale",
+            "nameShowPlayerTitle",
             "fontScale", "fontOutline",
             "textX", "textY", "textAlign",
             "nameWordWrap", "nameWrapWidth",
+        },
+    },
+    GUILD = {
+        mode = "keys",
+        keys = {
+            "guildTextEnable", "guildTextMode",
+            "guildTextFontSize", "guildTextOutline",
+            "guildTextX", "guildTextY", "guildTextAlign",
+            "guildTextWidth", "guildTextColor",
         },
     },
     HPTEXT = {
@@ -437,7 +481,7 @@ local function BuildDynIgnore(sectionKey, toType)
 end
 
 -- Копирует выбранный раздел из одного типа существа в другой.
--- sectionKey: "HPBAR"|"NAME"|"HPTEXT"|"LEVEL"|"TARGET"|"CASTBAR"|"BUFFS"|"DEBUFFS"|"CC"
+-- sectionKey: "HPBAR"|"NAME"|"GUILD"|"HPTEXT"|"LEVEL"|"TARGET"|"CASTBAR"|"BUFFS"|"DEBUFFS"|"CC"
 function NS.DB.CopySection(fromType, toType, sectionKey)
     if not BlizzPlatesFixDB or not BlizzPlatesFixDB.Units then return false, "db_not_ready" end
     if not fromType or not toType or fromType == toType then return false, "bad_types" end
@@ -480,7 +524,7 @@ function NS.DB.CopySection(fromType, toType, sectionKey)
 end
 
 -- Копирует несколько разделов за один раз и вызывает обновление только один раз.
--- sectionKeys: массив из "HPBAR"|"NAME"|...
+-- sectionKeys: массив из "HPBAR"|"NAME"|"GUILD"|...
 function NS.DB.CopySections(fromType, toType, sectionKeys)
     if type(sectionKeys) ~= "table" then
         return NS.DB.CopySection(fromType, toType, tostring(sectionKeys))

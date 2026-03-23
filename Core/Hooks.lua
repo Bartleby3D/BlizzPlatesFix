@@ -1,26 +1,30 @@
 local _, NS = ...
 -- Этот файл только устанавливает хуки. Логика реакции вынесена в Core/HooksDispatch.lua
 
-local function HookHandler(frame)
+local function HookHandler(frame, hookKey, reasonMask)
     if NS.HooksDispatch and NS.HooksDispatch.HandleCompactUpdate then
-        NS.HooksDispatch.HandleCompactUpdate(frame)
+        NS.HooksDispatch.HandleCompactUpdate(frame, hookKey, reasonMask)
     end
 end
 
 if _G.CompactUnitFrame_UpdateName then
-    hooksecurefunc("CompactUnitFrame_UpdateName", HookHandler)
+    hooksecurefunc("CompactUnitFrame_UpdateName", function(frame)
+        HookHandler(frame, "name", NS.REASON_NAME or 4096)
+    end)
 end
 
 if _G.CompactUnitFrame_UpdateHealth then
-    hooksecurefunc("CompactUnitFrame_UpdateHealth", HookHandler)
+    hooksecurefunc("CompactUnitFrame_UpdateHealth", function(frame)
+        HookHandler(frame, "health", NS.REASON_HEALTH or 8)
+    end)
 end
 
 -- Перехватываем дефолтное обновление аур Blizzard
 if _G.CompactUnitFrame_UpdateAuras then
     hooksecurefunc("CompactUnitFrame_UpdateAuras", function(frame)
-        -- Опционально: уведомляем наш движок, что произошел апдейт
-        HookHandler(frame)
-        
+        -- Уведомляем движок только об аурах, без полного REASON_ALL.
+        HookHandler(frame, "aura", NS.REASON_AURA or 2)
+
         -- Принудительно глушим стандартные ауры Blizzard на неймплейтах.
         -- В 12.0+ контейнером может быть BuffFrame/DebuffFrame/AurasFrame.
         if not frame or frame:IsForbidden() then return end

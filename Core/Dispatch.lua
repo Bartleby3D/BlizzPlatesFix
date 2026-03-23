@@ -25,6 +25,8 @@ local EventMasks = {
     UNIT_THREAT_SITUATION_UPDATE = NS.REASON_THREAT,
     UNIT_CLASSIFICATION_CHANGED = NS.REASON_CLASS,
     UNIT_TARGET = NS.REASON_TARGET,
+    UNIT_POWER_UPDATE = NS.REASON_POWER,
+    UNIT_POWER_FREQUENT = NS.REASON_POWER,
 
     UNIT_SPELLCAST_START = NS.REASON_CAST,
     UNIT_SPELLCAST_STOP = NS.REASON_CAST,
@@ -67,6 +69,43 @@ end
 
 function Dispatch.HandleEvent(event, arg1, arg2, ...)
 
+    if event == "UNIT_POWER_UPDATE" or event == "UNIT_POWER_FREQUENT" then
+        if arg1 == "player" then
+            local targetPlate = C_NamePlate.GetNamePlateForUnit("target")
+            local targetUnit = targetPlate and targetPlate.namePlateUnitToken
+            if targetUnit then
+                RequestUnitUpdate(targetUnit, event, false, NS.REASON_POWER or 2048)
+            end
+        end
+        return
+    end
+
+    if event == "UPDATE_SHAPESHIFT_FORM" or event == "PLAYER_SPECIALIZATION_CHANGED" then
+        RequestAllUpdate(event, true, NS.REASON_POWER or 2048)
+        return
+    end
+
+    if event == "RUNE_POWER_UPDATE" then
+        local targetPlate = C_NamePlate.GetNamePlateForUnit("target")
+        local targetUnit = targetPlate and targetPlate.namePlateUnitToken
+        if targetUnit then
+            RequestUnitUpdate(targetUnit, event, false, NS.REASON_POWER or 2048)
+        end
+        return
+    end
+
+    if event == "PLAYER_MOUNT_DISPLAY_CHANGED" then
+        RequestAllUpdate(event, true, NS.REASON_POWER or 2048)
+        return
+    end
+
+    if event == "UNIT_ENTERED_VEHICLE" or event == "UNIT_EXITED_VEHICLE" then
+        if arg1 == "player" then
+            RequestAllUpdate(event, true, NS.REASON_POWER or 2048)
+        end
+        return
+    end
+
     -- Hot path: avoid string operations for UNIT_* events.
     -- All unit events we care about are listed in EventMasks.
     if EventMasks[event] then
@@ -108,9 +147,6 @@ function Dispatch.HandleEvent(event, arg1, arg2, ...)
         end
         if NS.PendingAuraUpdates then
             NS.PendingAuraUpdates[arg1] = nil
-        end
-        if NS.ClearUnitConfigCache then
-            NS.ClearUnitConfigCache(arg1)
         end
         if NS.QuestIcon_ClearCache then
             NS.QuestIcon_ClearCache(arg1)

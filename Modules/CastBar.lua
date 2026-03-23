@@ -26,9 +26,38 @@ local function GetState(cb)
         castText = nil,
         targetText = nil,
         unit = nil,
+        lastTargetIdentity = nil,
     }
     CastBarState[cb] = st
     return st
+end
+
+local function SafeUnitNameString(unit)
+    local v = UnitName(unit)
+    if v == nil then return "" end
+    local ok, s = pcall(tostring, v)
+    if ok and s then return s end
+    return ""
+end
+
+local function GetTargetIdentity(unit)
+    return UnitGUID(unit) or GetUnitName(unit, true) or unit
+end
+
+local function GetTargetDisplayName(unit)
+    local fallbackName = SafeUnitNameString(unit)
+    local rpState = nil
+    local displayName = fallbackName
+
+    if NS.RP and NS.RP.GetDisplayName then
+        local resolvedName, state = NS.RP.GetDisplayName(unit, fallbackName)
+        rpState = state
+        if resolvedName ~= nil then
+            displayName = resolvedName
+        end
+    end
+
+    return displayName, rpState, fallbackName
 end
 
 local function GetClassColorRGB(unit)
@@ -92,36 +121,62 @@ local targetAcc = 0
 
 local TargetActive = setmetatable({}, { __mode = "k" })
 
+local function RefreshClassResource(frame, unit)
+    local mod = NS.Modules and NS.Modules.ClassResource
+    if not mod or not mod.Update or not frame then return end
+
+    local targetUnit = unit or frame.unit
+    if not targetUnit then return end
+
+    local db, gdb = NS.GetUnitConfig(targetUnit)
+    if db and gdb then
+        mod.Update(frame, targetUnit, db, gdb)
+    end
+end
+
 local function UpdateTargetText(cb, st, db)
     if not db or not st or not st.unit or not st.targetText then return end
 
     if not db.cbTargetEnabled then
+        st.lastTargetIdentity = nil
         st.targetText:Hide()
         return
     end
 
     local unit = st.unit
-
     local unitTarget = unit .. "target"
-    local name = UnitName(unitTarget)
-    if name then
-        st.targetText:SetText(" |cffFF0000=>|r " .. name)
-
-        if db.cbTargetMode == "CLASS" then
-            local cr, cg, cbCol = GetClassColorRGB(unitTarget)
-            st.targetText:SetTextColor(cr, cg, cbCol)
-        else
-            local tc = db.cbTargetColor
-            local r = (tc and tc.r) or 0.8
-            local g = (tc and tc.g) or 0.8
-            local b = (tc and tc.b) or 0.8
-            st.targetText:SetTextColor(r, g, b)
-        end
-
-        st.targetText:Show()
-    else
+    if not UnitExists(unitTarget) then
+        st.lastTargetIdentity = nil
         st.targetText:Hide()
+        return
     end
+
+    local identity = GetTargetIdentity(unitTarget)
+    local displayName, rpState, fallbackName = GetTargetDisplayName(unitTarget)
+
+    if rpState == "pending" then
+        if st.lastTargetIdentity ~= identity then
+            st.targetText:Hide()
+        end
+        st.lastTargetIdentity = identity
+        return
+    end
+
+    st.targetText:SetFormattedText(" |cffFF0000=>|r %s", displayName)
+
+    if db.cbTargetMode == "CLASS" then
+        local cr, cg, cbCol = GetClassColorRGB(unitTarget)
+        st.targetText:SetTextColor(cr, cg, cbCol)
+    else
+        local tc = db.cbTargetColor
+        local r = (tc and tc.r) or 0.8
+        local g = (tc and tc.g) or 0.8
+        local b = (tc and tc.b) or 0.8
+        st.targetText:SetTextColor(r, g, b)
+    end
+
+    st.lastTargetIdentity = identity
+    st.targetText:Show()
 end
 
 local function RegisterTarget(cb)
@@ -245,6 +300,7 @@ local function UpdateCastText(cb, st, db)
         cb:SetAlpha(0)
         if st.castText then st.castText:Hide() end
         if st.targetText then st.targetText:Hide() end
+        st.lastTargetIdentity = nil
         if st.icon then st.icon:Hide() end
         if st.iconBorder then st.iconBorder:Hide() end
         UnregisterTarget(cb)
@@ -269,6 +325,7 @@ local function UpdateCastBarLayout(frame, unit, db, gdb)
         cb:SetAlpha(0)
         if st.castText then st.castText:Hide() end
         if st.targetText then st.targetText:Hide() end
+        st.lastTargetIdentity = nil
         if st.icon then st.icon:Hide() end
         if st.iconBorder then st.iconBorder:Hide() end
         UnregisterTarget(cb)
@@ -345,6 +402,7 @@ local function UpdateCastBarLayout(frame, unit, db, gdb)
         st.targetText:SetWidth(db.cbTargetMaxLength > 0 and (db.cbTargetMaxLength * (tSize * 0.75)) or (barW - 8))
         st.targetText:SetWordWrap(false)
     else
+        st.lastTargetIdentity = nil
         st.targetText:Hide()
     end
 
@@ -368,6 +426,7 @@ local function UpdateCastBarLayout(frame, unit, db, gdb)
         UpdateTargetText(cb, st, db)
     else
         UnregisterTarget(cb)
+        st.lastTargetIdentity = nil
         if st.targetText then st.targetText:Hide() end
     end
 end
@@ -400,13 +459,16 @@ local function UpdateCastBar(frame, unit, db, gdb)
                     UpdateTargetText(cb, st, curDB)
                 end
             end
+            RefreshClassResource(frame, st.unit)
         end)
 
         cb:HookScript("OnHide", function()
             if st.icon then st.icon:Hide() end
             if st.iconBorder then st.iconBorder:Hide() end
             if st.targetText then st.targetText:Hide() end
+            st.lastTargetIdentity = nil
             UnregisterTarget(cb)
+            RefreshClassResource(frame, st.unit)
         end)
 
         cb:HookScript("OnSizeChanged", function()
@@ -452,10 +514,12 @@ local function UpdateCastBar(frame, unit, db, gdb)
             UpdateTargetText(cb, st, db)
         else
             UnregisterTarget(cb)
+            st.lastTargetIdentity = nil
             if st.targetText then st.targetText:Hide() end
         end
     else
         UnregisterTarget(cb)
+        st.lastTargetIdentity = nil
         if st.targetText then st.targetText:Hide() end
     end
 end
@@ -470,6 +534,7 @@ NS.Modules.CastBar = {
             UnregisterTarget(cb)
             local st = CastBarState[cb]
             if st then
+                st.lastTargetIdentity = nil
                 if st.targetText then st.targetText:Hide() end
                 if st.icon then st.icon:Hide() end
                 if st.iconBorder then st.iconBorder:Hide() end

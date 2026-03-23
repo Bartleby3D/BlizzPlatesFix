@@ -98,6 +98,9 @@ function NS.Options.GetTable(mainIdx, subIdx)
             -- Col 1
             Add("header", NS.L("Font settings"), nil, nil, nil, nil, nil, nil, 1)
             Add("checkbox", NS.L("Disable target scaling"), nil, "nameDisableTargetScale", nil, nil, nil, nil, 1)
+            if dbContext == NS.UNIT_TYPES.FRIENDLY_PLAYER or dbContext == NS.UNIT_TYPES.ENEMY_PLAYER then
+                Add("checkbox", NS.L("Show title"), nil, "nameShowPlayerTitle", nil, nil, nil, nil, 1)
+            end
             Add("slider", NS.L("Size"), nil, "fontScale", 4, 20, 0.5, nil, 1)
             Add("slider", NS.L("Offset X"), nil, "textX", -100, 100, 0.5, nil, 1)
             Add("slider", NS.L("Offset Y"), nil, "textY", -100, 100, 0.5, nil, 1)
@@ -137,8 +140,40 @@ function NS.Options.GetTable(mainIdx, subIdx)
             end
         end
 
-        -- 3. Текст здоровья
+        -- 3. Guild text
         if subIdx == 3 then
+            Add("vline", nil, nil, nil, nil, nil, nil, nil, 1, {size=550, offX=25, offY=0})
+
+            if dbContext == NS.UNIT_TYPES.FRIENDLY_PLAYER or dbContext == NS.UNIT_TYPES.ENEMY_PLAYER then
+                local alignList = { { text = NS.L("Left"), value = "LEFT" }, { text = NS.L("Center"), value = "CENTER" }, { text = NS.L("Right"), value = "RIGHT" } }
+                local outlineList = { { text = NS.L("Disable"), value = "NONE" }, { text = NS.L("Outline"), value = "OUTLINE" }, { text = NS.L("Thick outline"), value = "THICKOUTLINE" }, { text = NS.L("Shadow"), value = "SHADOW" } }
+                local guildModeList = { { text = NS.L("Under Name"), value = "UNDER_NAME" }, { text = NS.L("Below Health Bar"), value = "BELOW_HEALTHBAR" } }
+
+                Add("header", NS.L("Font settings"), nil, nil, nil, nil, nil, nil, 1)
+                Add("slider", NS.L("Size"), nil, "guildTextFontSize", 4, 20, 0.5, nil, 1)
+                Add("slider", NS.L("Offset X"), nil, "guildTextX", -100, 100, 0.5, nil, 1)
+                Add("slider", NS.L("Offset Y"), nil, "guildTextY", -100, 100, 0.5, nil, 1)
+                Add("dropdown", NS.L("Anchor"), nil, "guildTextMode", nil, nil, nil, guildModeList, 1)
+                Add("dropdown", NS.L("Alignment"), nil, "guildTextAlign", nil, nil, nil, alignList, 1)
+                Add("dropdown", NS.L("Outline"), nil, "guildTextOutline", nil, nil, nil, outlineList, 1)
+                Add("header", NS.L("Shorten text"), nil, nil, nil, nil, nil, nil, 2)
+                Add("slider", NS.L("Width limit"), nil, "guildTextWidth", 10, 200, 1, nil, 2)
+
+                Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 10})
+                Add("separator", nil, nil, nil, nil, nil, nil, nil, 2, {size=260, offY=8})
+                Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 5})
+
+                Add("header", NS.L("Guild color"), nil, nil, nil, nil, nil, nil, 2)
+                Add("color", NS.L("Color"), nil, "guildTextColor", nil, nil, nil, nil, 2, { offX = 20, noToggleLink = true })
+            else
+                Add("header", NS.L("Guild text"), nil, nil, nil, nil, nil, nil, 1)
+                Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = -10})
+                Add("header", NS.L("|cffff0000Available only for players|r"), nil, nil, nil, nil, nil, nil, 1)
+            end
+        end
+
+        -- 4. Текст здоровья
+        if subIdx == 4 then
             Add("vline", nil, nil, nil, nil, nil, nil, nil, 1, {size=550, offX=25, offY=0})
             -- Col 1
             Add("header", NS.L("Font settings"), nil, nil, nil, nil, nil, nil, 1)
@@ -165,7 +200,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
         end
 
         -- 4. Отображение уровня
-        if subIdx == 4 then
+        if subIdx == 5 then
             Add("vline", nil, nil, nil, nil, nil, nil, nil, 1, {size=550, offX=25, offY=0})
             -- Col 1
             Add("header", NS.L("Font settings"), nil, nil, nil, nil, nil, nil, 1)
@@ -184,7 +219,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
         end
 
         -- 5. Индикация цели
-        if subIdx == 5 then
+        if subIdx == 6 then
             Add("vline", nil, nil, nil, nil, nil, nil, nil, 1, {size=550, offX=25, offY=0})
             -- Col 1
             Add("header", NS.L("Side symbols"), nil, nil, nil, nil, nil, nil, 1)
@@ -231,7 +266,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
         end
 
         -- 6. Кастбар
-        if subIdx == 6 then
+        if subIdx == 7 then
             Add("vline", nil, nil, nil, nil, nil, nil, nil, 1, {size=550, offX=25, offY=0})
             local outlines = { { text = NS.L("Disable"), value = "NONE" }, { text = NS.L("Outline"), value = "OUTLINE" }, { text = NS.L("Thick outline"), value = "THICKOUTLINE" }, { text = NS.L("Shadow"), value = "SHADOW" } }
             local aligns   = { { text = NS.L("Left"), value = "LEFT" }, { text = NS.L("Center"), value = "CENTER" }, { text = NS.L("Right"), value = "RIGHT" } }
@@ -310,7 +345,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
         end
 
         -- 7. Баффы
-        if subIdx == 7 then
+        if subIdx == 8 then
             Add("vline", nil, nil, nil, nil, nil, nil, nil, 1, {size=550, offX=25, offY=0})
             local aligns = { { text = NS.L("Left"), value = "LEFT" }, { text = NS.L("Center"), value = "CENTER" }, { text = NS.L("Right"), value = "RIGHT" } }
 
@@ -391,7 +426,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
         end
 
         -- 8. Дебаффы
-        if subIdx == 8 then
+        if subIdx == 9 then
             Add("vline", nil, nil, nil, nil, nil, nil, nil, 1, {size=550, offX=25, offY=0})
             local aligns = { { text = NS.L("Left"), value = "LEFT" }, { text = NS.L("Center"), value = "CENTER" }, { text = NS.L("Right"), value = "RIGHT" } }
 
@@ -472,7 +507,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
         end
 
         -- 9. Контроль
-        if subIdx == 9 then
+        if subIdx == 10 then
             Add("vline", nil, nil, nil, nil, nil, nil, nil, 1, {size=550, offX=25, offY=0})
             local aligns = { { text = NS.L("Left"), value = "LEFT" }, { text = NS.L("Center"), value = "CENTER" }, { text = NS.L("Right"), value = "RIGHT" } }
 
@@ -595,6 +630,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
             local sections = {
                 { text = NS.L("Health bar"), key = "copySec_HPBAR", sec = "HPBAR" },
                 { text = NS.L("Name"), key = "copySec_NAME", sec = "NAME" },
+                { text = NS.L("Guild text"), key = "copySec_GUILD", sec = "GUILD" },
                 { text = NS.L("Health text"), key = "copySec_HPTEXT", sec = "HPTEXT" },
                 { text = NS.L("Level"), key = "copySec_LEVEL", sec = "LEVEL" },
                 { text = NS.L("Target indicator"), key = "copySec_TARGET", sec = "TARGET" },
@@ -686,19 +722,84 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("separator", nil, nil, nil, nil, nil, nil, nil, 1, {size=260, offY=8})
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
-            Add("header", NS.L("Tank mode"), nil, nil, nil, nil, nil, nil, 2)
-            Add("checkbox", NS.L("Enable"), nil, "tankModeEnable", nil, nil, nil, nil, 2)
-            Add("color", NS.L("Color: Aggro on you"), nil, "tankModePlayerAggroColor", nil, nil, nil, nil, 2, {offX=20})
-            Add("color", NS.L("Color: Aggro not on you"), nil, "tankModeOffTankColor", nil, nil, nil, nil, 2, {offX=20})
+            Add("header", NS.L("Tank mode"), nil, nil, nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Enable"), nil, "tankModeEnable", nil, nil, nil, nil, 1)
+            Add("color", NS.L("Color: Aggro on you"), nil, "tankModePlayerAggroColor", nil, nil, nil, nil, 1, {offX=20})
+            Add("color", NS.L("Color: Aggro not on you"), nil, "tankModeOffTankColor", nil, nil, nil, nil, 1, {offX=20})
 
-            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 10})
-            Add("separator", nil, nil, nil, nil, nil, nil, nil, 2, {size=260, offY=8})
-            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 5})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 10})
+            Add("separator", nil, nil, nil, nil, nil, nil, nil, 1, {size=260, offY=8})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
-            Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 2)
-            Add("checkbox", NS.L("Hide highlight (Absorb)"), nil, "hideAbsorbGlow", nil, nil, nil, nil, 2)
-            Add("checkbox", NS.L("Hide heal prediction"), nil, "hideHealPrediction", nil, nil, nil, nil, 2)
-            Add("checkbox", NS.L("Hide shield (uninterruptible cast)"), nil, "hideCastShield", nil, nil, nil, nil, 2)
+            Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Hide highlight (Absorb)"), nil, "hideAbsorbGlow", nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Hide heal prediction"), nil, "hideHealPrediction", nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Hide shield (uninterruptible cast)"), nil, "hideCastShield", nil, nil, nil, nil, 1)
+
+            Add("header", NS.L("Class resource indicators"), nil, nil, nil, nil, nil, nil, 2)
+            Add("checkbox", NS.L("Enable"), nil, "classResourceEnabled", nil, nil, nil, nil, 2)
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -5})
+            Add("checkbox", NS.L("Show only in combat"), nil, "classResourceOnlyInCombat", nil, nil, nil, nil, 2, {offX=20})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -5})
+            Add("checkbox", NS.L("Hide on transport"), nil, "classResourceHideOnTransport", nil, nil, nil, nil, 2, {offX=20})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -5})
+            Add("checkbox", NS.L("Show empty slots"), nil, "classResourceShowEmpty", nil, nil, nil, nil, 2, {offX=20})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -5})
+            Add("checkbox", NS.L("Fill from right to left"), nil, "classResourceReverseFill", nil, nil, nil, nil, 2, {offX=20})
+            local classResourceAnchorModeList = {
+                { text = NS.L("Anchor free"), value = 1 },
+                { text = NS.L("Anchor dynamic under cast bar"), value = 2 },
+            }
+            Add("dropdown", NS.L("Anchor mode"), nil, "classResourceAnchorMode", nil, nil, nil, classResourceAnchorModeList, 2, {
+                offX=20,
+                onChange=function(val)
+                    if NS.Config and NS.Config.Set then
+                        NS.Config.Set("classResourceAnchorMode", val, "Global")
+                    end
+                    if NS.RequestUpdateAll then
+                        NS.RequestUpdateAll("classresource_anchor_mode", true, NS.REASON_POWER or NS.REASON_ALL)
+                    elseif NS.ForceUpdateAll then
+                        NS.ForceUpdateAll()
+                    end
+                end,
+            })
+            local classResourceStyleList = {
+                { text = NS.L("Custom"), value = 1 },
+                { text = NS.L("Modern"), value = 2 },
+            }
+            Add("dropdown", NS.L("Style"), nil, "classResourceStyle", nil, nil, nil, classResourceStyleList, 2, {
+                offX=20,
+                onChange=function(val)
+                    if NS.Config and NS.Config.Set then
+                        NS.Config.Set("classResourceStyle", val, "Global")
+                    end
+                    if NS.RequestUpdateAll then
+                        NS.RequestUpdateAll("classresource_style", true, NS.REASON_POWER or NS.REASON_ALL)
+                    elseif NS.ForceUpdateAll then
+                        NS.ForceUpdateAll()
+                    end
+                end,
+            })
+            Add("header", NS.L("Custom style settings"), nil, nil, nil, nil, nil, nil, 2, {offX=20, requires={key="classResourceStyle", value=1}})
+            Add("slider", NS.L("Width"), nil, "classResourceWidth", 6, 30, 1, nil, 2, {offX=20, requires={key="classResourceStyle", value=1}})
+            Add("slider", NS.L("Height"), nil, "classResourceHeight", 4, 20, 1, nil, 2, {offX=20, requires={key="classResourceStyle", value=1}})
+            Add("slider", NS.L("Spacing"), nil, "classResourceSpacing", 0, 10, 1, nil, 2, {offX=20, requires={key="classResourceStyle", value=1}})
+            Add("slider", NS.L("Offset X"), nil, "classResourceOffsetX", -150, 150, 1, nil, 2, {offX=20, requires={key="classResourceStyle", value=1}})
+            Add("slider", NS.L("Offset Y"), nil, "classResourceOffsetY", -150, 150, 1, nil, 2, {offX=20, requires={key="classResourceStyle", value=1}})
+            Add("slider", NS.L("Recovering opacity"), nil, "classResourceInactiveAlpha", 0, 1, 0.05, nil, 2, {offX=20, requires={key="classResourceStyle", value=1}})
+
+            Add("header", NS.L("Modern style settings"), nil, nil, nil, nil, nil, nil, 2, {offX=20, requires={key="classResourceStyle", value=2}})
+            Add("slider", NS.L("Scale"), nil, "classResourceModernScale", 0.5, 2, 0.05, nil, 2, {offX=20, requires={key="classResourceStyle", value=2}})
+            Add("slider", NS.L("Spacing"), nil, "classResourceModernSpacing", 0, 15, 1, nil, 2, {offX=20, requires={key="classResourceStyle", value=2}})
+            Add("slider", NS.L("Offset X"), nil, "classResourceModernOffsetX", -150, 150, 1, nil, 2, {offX=20, requires={key="classResourceStyle", value=2}})
+            Add("slider", NS.L("Offset Y"), nil, "classResourceModernOffsetY", -150, 150, 1, nil, 2, {offX=20, requires={key="classResourceStyle", value=2}})
+            Add("slider", NS.L("Recovering opacity"), nil, "classResourceModernInactiveAlpha", 0, 1, 0.05, nil, 2, {offX=20, requires={key="classResourceStyle", value=2}})
+        end
+
+        if subIdx == 4 then
+            Add("vline", nil, nil, nil, nil, nil, nil, nil, 1, {size=550, offX=25, offY=0})
+            Add("header", NS.L("Roleplay support"), nil, nil, nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Enable RP/TRP3 support"), NS.L("Use roleplay names from Total RP 3 and compatible MSP-based addons on nameplates."), "rpSupportEnabled", nil, nil, nil, nil, 1)
         end
     end
 

@@ -28,6 +28,7 @@ local function GetState(frame)
         lastColorB = nil,
         lastScale = nil,
         hookedBlizzName = false,
+        lastNameIdentity = nil,
     }
     FrameState[frame] = st
     return st
@@ -61,6 +62,32 @@ local function SafeUnitNameString(unit)
     local ok, s = pcall(tostring, v)
     if ok and s then return s end
     return ""
+end
+
+local function GetNameWithOptionalTitle(unit, fallbackName, db, rpState)
+    if not db or db.nameShowPlayerTitle ~= true then
+        return fallbackName
+    end
+
+    if not unit or not UnitExists(unit) or not UnitIsPlayer(unit) or UnitIsUnit(unit, "player") then
+        return fallbackName
+    end
+
+    if rpState == "resolved" or rpState == "pending" then
+        return fallbackName
+    end
+
+    local titledName = UnitPVPName and UnitPVPName(unit)
+    if titledName == nil or titledName == "" then
+        return fallbackName
+    end
+
+    local ok, s = pcall(tostring, titledName)
+    if ok and s and s ~= "" then
+        return s
+    end
+
+    return fallbackName
 end
 
 local function GetUnitColor(unit, db)
@@ -136,8 +163,20 @@ local function EnsureBlizzNameHooks(frame, st)
         if not self.BPF_Block then return end
         if self.BPF_InHook then return end
         self.BPF_InHook = true
+        if self.Hide then self:Hide() end
         self:SetAlpha(0)
         self.BPF_InHook = false
+    end)
+
+    hooksecurefunc(blizz, "SetShown", function(self, shown)
+        if not self.BPF_Block then return end
+        if self.BPF_InHook then return end
+        if shown then
+            self.BPF_InHook = true
+            if self.Hide then self:Hide() end
+            self:SetAlpha(0)
+            self.BPF_InHook = false
+        end
     end)
 
     hooksecurefunc(blizz, "SetAlpha", function(self, a)
@@ -145,6 +184,7 @@ local function EnsureBlizzNameHooks(frame, st)
         if self.BPF_InHook then return end
         if a and a > 0 then
             self.BPF_InHook = true
+            if self.Hide then self:Hide() end
             self:SetAlpha(0)
             self.BPF_InHook = false
         end
@@ -181,13 +221,15 @@ local function ApplyStyle(frame, st, unit, db, gdb)
         st.lastPointAlignH = nil
         st.lastPointX = nil
         st.lastPointY = nil
+        st.lastNameIdentity = nil
         return
     end
 
-    if NS.IsSimplifiedNotTarget(frame, unit) then
+    if NS.ShouldHideModuleOnSimplified("NameText", frame, unit) then
         if st.fs then st.fs:Hide() end
         if st.wrapper then st.wrapper:Hide() end
         SetBlizzBlocked(frame, true)
+        st.lastNameIdentity = nil
         return
     end
 
@@ -229,7 +271,25 @@ local function ApplyStyle(frame, st, unit, db, gdb)
     end
 
     -- ШАГ 2: Установка текста (Предоставление данных движку для расчета)
-    fs:SetText(SafeUnitNameString(unit))
+    local fallbackName = SafeUnitNameString(unit)
+    local displayName = fallbackName
+    local rpState = nil
+
+    if NS.RP and NS.RP.GetDisplayName then
+        local resolvedName, state = NS.RP.GetDisplayName(unit, fallbackName)
+        rpState = state
+        if resolvedName ~= nil then
+            displayName = resolvedName
+        end
+    end
+
+    displayName = GetNameWithOptionalTitle(unit, displayName, db, rpState)
+
+    local nameIdentity = UnitGUID(unit) or unit
+    -- RP data can be pending for a while; keep showing the regular name as a fallback
+    -- instead of blanking the text until the RP addon resolves a profile name.
+    fs:SetText(displayName)
+    st.lastNameIdentity = nameIdentity
 
     -- ШАГ 3: Установка ограничений (Ширина, усечение)
     if st.lastTruncate ~= truncate then
@@ -342,5 +402,6 @@ NS.Modules.NameText = {
         st.lastPointAlignH = nil
         st.lastPointX = nil
         st.lastPointY = nil
+        st.lastNameIdentity = nil
     end
 }

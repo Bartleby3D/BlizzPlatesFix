@@ -24,12 +24,14 @@ end
 -- фиксированный порядок, чтобы избежать “случайных” зависимостей
 M.ORDER = {
     "HpBar",
+    "ClassResource",
     "Icon",
     "FactionIcon",
     "QuestIcon",
     "RaidTargetIcon",
     "Auras",
     "NameText",
+    "GuildText",
     "HpText",
     "Level",
     "CastBar",
@@ -45,11 +47,13 @@ M.ORDER = {
 M.REASONS = {
     -- Геометрия/конфиг
     HpBar = bor(bor(bor(bor(NS.REASON_PLATE or 1, NS.REASON_CONFIG or 128), NS.REASON_CVAR or 256), NS.REASON_HEALTH or 8), bor(NS.REASON_THREAT or 16, NS.REASON_CLASS or 32)),
+    ClassResource = bor(bor(bor(NS.REASON_PLATE or 1, NS.REASON_CONFIG or 128), NS.REASON_TARGET or 64), NS.REASON_POWER or 2048),
     Icon = bor(bor(NS.REASON_PLATE or 1, NS.REASON_CONFIG or 128), NS.REASON_CLASS or 32),
     FactionIcon = bor(bor(NS.REASON_PLATE or 1, NS.REASON_CONFIG or 128), NS.REASON_CLASS or 32),
     QuestIcon = bor(bor(NS.REASON_PLATE or 1, NS.REASON_CONFIG or 128), NS.REASON_QUEST or 1024),
     RaidTargetIcon = bor(bor(NS.REASON_TARGET or 64, NS.REASON_PLATE or 1), NS.REASON_CONFIG or 128),
-    NameText = bor(bor(bor(NS.REASON_PLATE or 1, NS.REASON_CONFIG or 128), NS.REASON_CLASS or 32), NS.REASON_TARGET or 64),
+    NameText = bor(bor(bor(bor(NS.REASON_PLATE or 1, NS.REASON_CONFIG or 128), NS.REASON_CLASS or 32), NS.REASON_TARGET or 64), NS.REASON_NAME or 4096),
+    GuildText = bor(bor(bor(NS.REASON_PLATE or 1, NS.REASON_CONFIG or 128), NS.REASON_TARGET or 64), NS.REASON_NAME or 4096),
     HpText = bor(bor(bor(NS.REASON_PLATE or 1, NS.REASON_CONFIG or 128), NS.REASON_HEALTH or 8), NS.REASON_CLASS or 32),
     Level = bor(bor(bor(NS.REASON_PLATE or 1, NS.REASON_CONFIG or 128), NS.REASON_CLASS or 32), NS.REASON_TARGET or 64),
 

@@ -18,7 +18,6 @@ local function GetState(frame)
         lastMirror = nil,
         lastAlpha = nil,
         lastAnchor = nil,
-        lastBlizzShown = nil,
     }
     State[frame] = st
     return st
@@ -55,6 +54,14 @@ local function UpdateIcon(frame, unit, db, gdb)
 
     local icon = GetMyIcon(frame)
 
+    if NS.ShouldHideModuleOnSimplified("Icon", frame, unit) then
+        if st.lastVisible ~= false then
+            icon:Hide()
+            st.lastVisible = false
+        end
+        return
+    end
+
     if not gdb.classifEnabled then
         if st.lastVisible ~= false then
             icon:Hide()
@@ -63,19 +70,6 @@ local function UpdateIcon(frame, unit, db, gdb)
         return
     end
 
-    local blizzName = frame.name or (frame.UnitFrame and frame.UnitFrame.name)
-    local blizzShown = (not blizzName) or blizzName:IsShown()
-
-    if st.lastBlizzShown ~= blizzShown then
-        st.lastBlizzShown = blizzShown
-    end
-    if not blizzShown then
-        if st.lastVisible ~= false then
-            icon:Hide()
-            st.lastVisible = false
-        end
-        return
-    end
 
     if gdb.classifHideAllies and UnitIsFriend("player", unit) then
         if st.lastVisible ~= false then
@@ -194,7 +188,6 @@ NS.Modules.Icon = {
         st.lastVisible = false
         st.lastAlpha = nil
         st.lastAnchor = nil
-        st.lastBlizzShown = nil
         if st.hiddenBlizz and frame.ClassificationFrame then
             frame.ClassificationFrame:SetParent(frame)
             st.hiddenBlizz = false
