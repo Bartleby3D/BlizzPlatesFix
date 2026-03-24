@@ -8,6 +8,7 @@ BlizzPlatesFix — is a lightweight modular addon for deep customization of stan
 -Aura Engine: Buff and debuff display settings.
 -Cast Bars: Cast bar settings with ability icon, timer, and cast target display.
 -Target Indicators: Visual target markers (customizable arrows, symbols, and frame highlighting).
+-Class Resources: Option to enable secondary class resources, with a choice of two styles (custom and modern) and additional settings.
 
 ⌨️ Control Commands
 
