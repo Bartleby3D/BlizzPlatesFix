@@ -2,7 +2,7 @@
 ## Title: BlizzPlatesFix
 ## Notes: Modular NamePlates
 ## Author: Archer#2848
-## Version: 1.0.4
+## Version: 1.0.5
 ## SavedVariables: BlizzPlatesFixDB
 ## IconTexture: Interface\AddOns\BlizzPlatesFix\Media\BPFIcon.tga
 ## X-License: All Rights Reserved

@@ -149,8 +149,10 @@ local function ApplyModernFillClip(slot, fillMode, reverseFill, skin, visibleWid
 
     local insetX = (skin and skin.insetX) or 0
     local insetY = (skin and skin.insetY) or 0
-    local fullWidth = max(1, floor(((slot:GetWidth() or 0) - (insetX * 2)) + 0.5))
-    local fullHeight = max(1, floor(((slot:GetHeight() or 0) - (insetY * 2)) + 0.5))
+    local slotWidth = tonumber(slot._bpfLayoutWidth) or 0
+    local slotHeight = tonumber(slot._bpfLayoutHeight) or 0
+    local fullWidth = max(1, floor((slotWidth - (insetX * 2)) + 0.5))
+    local fullHeight = max(1, floor((slotHeight - (insetY * 2)) + 0.5))
     local clipWidth = fullWidth
 
     if fillMode == "PROGRESS" then
@@ -295,6 +297,8 @@ function CR.UpdateSlotLayout(holder, st, count, width, height, spacing)
         local slot = CR.EnsureSlot(holder, st, i)
         slot:ClearAllPoints()
         slot:SetSize(width, height)
+        slot._bpfLayoutWidth = width
+        slot._bpfLayoutHeight = height
         if i == 1 then
             slot:SetPoint("LEFT", holder, "LEFT", 0, 0)
         else
