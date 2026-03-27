@@ -168,44 +168,51 @@ function Dispatch.HandleEvent(event, arg1, arg2, ...)
     end
 
     if event == "PLAYER_REGEN_ENABLED" then
-    -- Apply deferred settings safely out of combat.
-    if NS.Config and NS.Config.CommitPending then
-        NS.Config.CommitPending()
+        -- Apply deferred settings safely out of combat.
+        if NS.Config and NS.Config.CommitPending then
+            NS.Config.CommitPending()
+        end
+        if NS.Profiles and NS.Profiles.CommitPending then
+            NS.Profiles.CommitPending()
+        end
+        if NS.FriendlyInstanceNames and NS.FriendlyInstanceNames.UpdateState then
+            NS.SafeCall(NS.FriendlyInstanceNames.UpdateState, event)
+        end
+        RequestAllUpdate(event, false, NS.REASON_ALL)
+        return
     end
-    if NS.Profiles and NS.Profiles.CommitPending then
-        NS.Profiles.CommitPending()
+
+    if event == "PLAYER_TARGET_CHANGED" then
+        RequestAllUpdate(event, false, NS.REASON_ALL)
+        return
     end
-    RequestAllUpdate(event, false, NS.REASON_ALL)
-    return
-end
 
-if event == "PLAYER_TARGET_CHANGED" then
-    RequestAllUpdate(event, false, NS.REASON_ALL)
-    return
-end
-
-if event == "RAID_TARGET_UPDATE" then
-    RequestAllUpdate(event, true, NS.REASON_TARGET or 64)
-    return
-end
-
-if event == "QUEST_LOG_UPDATE" or event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then
-    if NS.QuestIcon_ClearCache then
-        NS.QuestIcon_ClearCache()
+    if event == "RAID_TARGET_UPDATE" then
+        RequestAllUpdate(event, true, NS.REASON_TARGET or 64)
+        return
     end
-    RequestAllUpdate(event, false, NS.REASON_QUEST or 1024)
-    return
-end
+
+    if event == "QUEST_LOG_UPDATE" or event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then
+        if NS.QuestIcon_ClearCache then
+            NS.QuestIcon_ClearCache()
+        end
+        if (event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA") and NS.FriendlyInstanceNames and NS.FriendlyInstanceNames.UpdateState then
+            NS.SafeCall(NS.FriendlyInstanceNames.UpdateState, event)
+        end
+        RequestAllUpdate(event, false, NS.REASON_QUEST or 1024)
+        return
+    end
 
     -- CVars
     if event == "CVAR_UPDATE" then
+        if NS.FriendlyInstanceNames and NS.FriendlyInstanceNames.OnCVarUpdate then
+            NS.SafeCall(NS.FriendlyInstanceNames.OnCVarUpdate, arg1)
+        end
         if arg1 and ImportantCVars[arg1] then
             RequestAllUpdate("cvar:" .. arg1, false, NS.REASON_ALL)
         end
         return
     end
-
-
 
     -- UNIT_AURA: store refreshData for incremental processing (Retail)
     if event == "UNIT_AURA" then

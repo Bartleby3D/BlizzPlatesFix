@@ -329,7 +329,7 @@ function NS.Widgets.CreateHeader(parent, text)
     return NS.CreateHeader(parent, text)
 end
 
-function NS.Widgets.CreateSlider(parent, label, dbKey, min, max, step, desc, context)
+function NS.Widgets.CreateSlider(parent, label, dbKey, min, max, step, desc, context, onChange)
     local wrapper = NS.CreateModernSlider(parent, label, min, max)
     local s = wrapper.slider
 
@@ -350,6 +350,9 @@ function NS.Widgets.CreateSlider(parent, label, dbKey, min, max, step, desc, con
         -- Сохраняем в контекст
         NS.Config.Set(dbKey, value, context)
         UpdateValueText(value)
+        if onChange then
+            pcall(onChange, value)
+        end
     end
 
     if desc then
@@ -379,7 +382,7 @@ function NS.Widgets.CreateCheckbox(parent, label, dbKey, desc, targetValue, cont
         if not StaticPopupDialogs["BLIZZPLATESFIX_RELOAD_UI"] then
             StaticPopupDialogs["BLIZZPLATESFIX_RELOAD_UI"] = {
                 text = NS.L("Change requires reloading the UI (ReloadUI)."),
-                button1 = "Reload",
+                button1 = NS.L("Reload"),
                 button2 = NS.L("Later"),
                 OnAccept = function() ReloadUI() end,
                 timeout = 0,

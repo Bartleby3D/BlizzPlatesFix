@@ -138,6 +138,52 @@ function NS.Options.GetTable(mainIdx, subIdx)
             else
                 Add("color", NS.L("Fixed color"), nil, "nameColor", nil, nil, nil, nil, 2, { offX = 20, noToggleLink = true, requires = { key = "nameColorMode", value = 2 } })
             end
+
+            if dbContext == NS.UNIT_TYPES.FRIENDLY_PLAYER then
+                Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 10})
+                Add("separator", nil, nil, nil, nil, nil, nil, nil, 2, {size=260, offY=8})
+                Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 5})
+
+                Add("header", NS.L("Name display in dungeons/raids"), nil, nil, nil, nil, nil, nil, 2)
+                Add("checkbox", NS.L("Enable"), nil, "friendlyInstanceNamesEnable", nil, nil, nil, nil, 2, {
+                    onChange = function()
+                        if NS.FriendlyInstanceNames and NS.FriendlyInstanceNames.OnSettingsChanged then
+                            NS.FriendlyInstanceNames.OnSettingsChanged()
+                        end
+                    end,
+                })
+                Add("checkbox", NS.L("Class color"), nil, "friendlyInstanceNamesClassColor", nil, nil, nil, nil, 2, {
+                    offX = 20,
+                    onChange = function()
+                        if NS.FriendlyInstanceNames and NS.FriendlyInstanceNames.OnSettingsChanged then
+                            NS.FriendlyInstanceNames.OnSettingsChanged()
+                        end
+                    end,
+                })
+                local friendlyOutlineList = {
+                    { text = NS.L("Disable"), value = "NONE" },
+                    { text = NS.L("Outline"), value = "OUTLINE" },
+                    { text = NS.L("Thick outline"), value = "THICKOUTLINE" },
+                    { text = NS.L("Shadow"), value = "SHADOW" },
+                }
+                Add("slider", NS.L("Size"), nil, "friendlyInstanceNamesFontSize", 10, 16, 2, nil, 2, {
+                    offX = 20,
+                    onChange = function()
+                        if NS.FriendlyInstanceNames and NS.FriendlyInstanceNames.OnSettingsChanged then
+                            NS.FriendlyInstanceNames.OnSettingsChanged()
+                        end
+                    end,
+                })
+                Add("dropdown", NS.L("Outline"), nil, "friendlyInstanceNamesFontOutline", nil, nil, nil, friendlyOutlineList, 2, {
+                    offX = 20,
+                    onChange = function(value)
+                        NS.Config.Set("friendlyInstanceNamesFontOutline", value, dbContext)
+                        if NS.FriendlyInstanceNames and NS.FriendlyInstanceNames.OnSettingsChanged then
+                            NS.FriendlyInstanceNames.OnSettingsChanged()
+                        end
+                    end,
+                })
+            end
         end
 
         -- 3. Guild text

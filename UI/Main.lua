@@ -139,7 +139,7 @@ local function DrawOptions(container, mainIdx, subIdx)
 
             elseif opt.type == "slider" then
                 -- ПЕРЕДАЕМ opt.context!
-                widget = NS.Widgets.CreateSlider(container, opt.label, opt.db, opt.min, opt.max, opt.step, opt.desc, opt.context)
+                widget = NS.Widgets.CreateSlider(container, opt.label, opt.db, opt.min, opt.max, opt.step, opt.desc, opt.context, opt.onChange)
                 widget:SetPoint("TOPLEFT", finalX, currentY)
                 local extra = opt.desc and 15 or 0
                 currentY = currentY - 50 - extra
@@ -309,6 +309,10 @@ function NS.InitializeGUI()
     NS.DropdownParent = MainFrame
     MainFrame:Hide()
 
+    if NS.PreviewNameplate and NS.PreviewNameplate.Initialize then
+        NS.PreviewNameplate.Initialize(MainFrame)
+    end
+
     local Title = MainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     Title:SetPoint("BOTTOMLEFT", MainFrame, "TOPLEFT", 10, 8)
     Title:SetText("|cff00aaffBlizzPlates|r Fix")
@@ -410,6 +414,9 @@ function NS.InitializeGUI()
         local savedScroll = 0
         if preserveScroll and ScrollBar and ScrollBar:IsShown() then
             savedScroll = ScrollBar:GetValue() or 0
+        end
+        if NS.PreviewNameplate and NS.PreviewNameplate.ApplyMainTab then
+            NS.PreviewNameplate.ApplyMainTab(CurrentMainTab)
         end
         if CurrentMainTab == 6 then
             LeftPanel:Hide()

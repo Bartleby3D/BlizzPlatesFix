@@ -7,6 +7,12 @@ local _, NS = ...
 
 NS.Config = NS.Config or {}
 
+local function _NotifyConfigChanged(key, context, kind)
+    if NS and NS.PreviewNameplate and NS.PreviewNameplate.NotifyConfigChanged then
+        pcall(NS.PreviewNameplate.NotifyConfigChanged, key, context, kind)
+    end
+end
+
 -- =============================================================
 -- Combat-safe config writes:
 --  - In combat we DO NOT mutate SavedVariables tables used by nameplate updates.
@@ -80,6 +86,10 @@ function NS.Config.CommitPending()
         NS.SafeCall(NS.ApplySystemCVars)
     end
     _PendingGlobalTouched = false
+
+    if NS.FriendlyInstanceNames and NS.FriendlyInstanceNames.UpdateState then
+        NS.SafeCall(NS.FriendlyInstanceNames.UpdateState, "commit_pending")
+    end
 
     -- single refresh
     if NS.RequestUpdateAll then
@@ -205,6 +215,7 @@ function NS.Config.Set(key, value, context)
         if ctx == "Global" then
             _PendingGlobalTouched = true
         end
+        _NotifyConfigChanged(key, context, "value")
         return
     end
 
@@ -225,6 +236,8 @@ function NS.Config.Set(key, value, context)
     if (context == nil or context == "Global") and NS.ApplySystemCVars then
         NS.ApplySystemCVars()
     end
+
+    _NotifyConfigChanged(key, context, "value")
 end
 
 
@@ -255,6 +268,7 @@ function NS.Config.SetColor(key, r, g, b, a, context)
         if ctx == "Global" then
             _PendingGlobalTouched = true
         end
+        _NotifyConfigChanged(key, context, "color")
         return
     end
 
@@ -276,4 +290,6 @@ function NS.Config.SetColor(key, r, g, b, a, context)
     elseif NS.ForceUpdateAll then
         NS.ForceUpdateAll()
     end
+
+    _NotifyConfigChanged(key, context, "color")
 end

@@ -166,7 +166,7 @@ function NS.UpdateAllModules(unit, reasonMask)
             if type(func) == "function" then
                 local ok, err = pcall(func, frame, unit, dbUnit, dbGlobal)
                 if not ok and NS.DEBUG then
-                    print("|cffff0000BlizzPlatesFix error in module:|r", name, err)
+                    print("|cffff0000" .. NS.L("BlizzPlatesFix error in module:") .. "|r", name, err)
                 end
             end
         end

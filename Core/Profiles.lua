@@ -285,14 +285,14 @@ local function EnsurePopups()
             local ok, why = NS.Profiles.Create(name, copy)
             if not ok then
                 if why == "exists" then
-                    PrintMsg(NS.L("Profile already exists: ") .. name)
+                    PrintMsg(NS.LF("Profile already exists: %s", name))
                 else
                     PrintMsg(NS.L("Failed to create profile."))
                 end
                 return
             end
             NS.Profiles.SetCurrent(name)
-            PrintMsg(NS.L("Profile created: ") .. name)
+            PrintMsg(NS.LF("Profile created: %s", name))
             if NS.RefreshGUI then NS.RefreshGUI(true) end
         end,
         EditBoxOnEnterPressed = function(self)
@@ -337,10 +337,10 @@ function NS.Profiles.ConfirmResetCurrent()
     if StaticPopup_Show then
         local f = function()
             NS.Profiles.Reset(cur)
-            PrintMsg(NS.L("Profile reset: ") .. cur)
+            PrintMsg(NS.LF("Profile reset: %s", cur))
             if NS.RefreshGUI then NS.RefreshGUI(true) end
         end
-        StaticPopupDialogs[POPUP_CONFIRM].text = NS.L("Reset current profile \"") .. cur .. NS.L("\" to defaults?")
+        StaticPopupDialogs[POPUP_CONFIRM].text = NS.LF("Reset current profile \"%s\" to defaults?", cur)
         StaticPopup_Show(POPUP_CONFIRM, nil, nil, { fn = f })
     end
 end
@@ -360,7 +360,7 @@ function NS.Profiles.ConfirmCopyIntoCurrent()
         return
     end
     if not (BlizzPlatesFixDB.profiles and BlizzPlatesFixDB.profiles[src]) then
-        PrintMsg(NS.L("Source not found: ") .. src)
+        PrintMsg(NS.LF("Source not found: %s", src))
         return
     end
 
@@ -368,12 +368,12 @@ function NS.Profiles.ConfirmCopyIntoCurrent()
         local f = function()
             local ok = NS.Profiles.Copy(src, cur)
             if ok then
-                PrintMsg(NS.L("Copied from \"") .. src .. NS.L("\" to \"") .. cur .. "\"")
+                PrintMsg(NS.LF("Copied from \"%s\" to \"%s\"", src, cur))
             else
                 PrintMsg(NS.L("Failed to copy profile."))
             end
         end
-        StaticPopupDialogs[POPUP_CONFIRM].text = NS.L("Overwrite current profile \"") .. cur .. NS.L("\" with profile \"") .. src .. "\"?"
+        StaticPopupDialogs[POPUP_CONFIRM].text = NS.LF("Overwrite current profile \"%s\" with profile \"%s\"?", cur, src)
         StaticPopup_Show(POPUP_CONFIRM, nil, nil, { fn = f })
     end
 end
@@ -396,7 +396,7 @@ function NS.Profiles.ConfirmDeleteSelected()
         return
     end
     if not (BlizzPlatesFixDB.profiles and BlizzPlatesFixDB.profiles[name]) then
-        PrintMsg(NS.L("Profile not found: ") .. name)
+        PrintMsg(NS.LF("Profile not found: %s", name))
         return
     end
 
@@ -414,13 +414,13 @@ function NS.Profiles.ConfirmDeleteSelected()
                         NS.Config.Set("profileCopySource", "Default", ctx)
                     end
                 end
-                PrintMsg(NS.L("Profile deleted: ") .. name)
+                PrintMsg(NS.LF("Profile deleted: %s", name))
                 if NS.RefreshGUI then NS.RefreshGUI(true) end
             else
-                PrintMsg(NS.L("Failed to delete profile (") .. tostring(why) .. ")")
+                PrintMsg(NS.LF("Failed to delete profile (%s)", tostring(why)))
             end
         end
-        StaticPopupDialogs[POPUP_CONFIRM].text = NS.L("Delete profile \"") .. name .. "\"?"
+        StaticPopupDialogs[POPUP_CONFIRM].text = NS.LF("Delete profile \"%s\"?", name)
         StaticPopup_Show(POPUP_CONFIRM, nil, nil, { fn = f })
     end
 end

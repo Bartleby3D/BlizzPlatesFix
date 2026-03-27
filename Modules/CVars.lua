@@ -59,4 +59,7 @@ function NS.ApplySystemCVars()
             SetCVarIfChanged("nameplateMinAlphaDistance", def)
         end
     end
+    if NS.FriendlyInstanceNames and NS.FriendlyInstanceNames.UpdateState then
+        NS.FriendlyInstanceNames.UpdateState("ApplySystemCVars")
+    end
 end

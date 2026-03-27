@@ -171,6 +171,12 @@ NS.DB.unitDefaults = {
     nameColorHostile  = {r=1, g=1, b=1}, -- Враждебный (EnemyNPC)
     nameColorFriendly = {r=1, g=1, b=1}, -- Союзник (FriendlyNPC)
 
+    -- Friendly players: instance-only names mode (party/raid via Blizzard CVars)
+    friendlyInstanceNamesEnable = false,
+    friendlyInstanceNamesClassColor = true,
+    friendlyInstanceNamesFontSize = 9,
+    friendlyInstanceNamesFontOutline = "SHADOW",
+
     -- Текст гильдии
     guildTextEnable = false,
     guildTextMode = "UNDER_NAME",
@@ -388,6 +394,8 @@ NS.DB.CopySectionRules = {
             "fontScale", "fontOutline",
             "textX", "textY", "textAlign",
             "nameWordWrap", "nameWrapWidth",
+            "friendlyInstanceNamesEnable", "friendlyInstanceNamesClassColor",
+            "friendlyInstanceNamesFontSize", "friendlyInstanceNamesFontOutline",
         },
     },
     GUILD = {

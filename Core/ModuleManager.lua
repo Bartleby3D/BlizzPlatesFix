@@ -74,7 +74,7 @@ M.REASONS = {
 local function SafeCall(name, fn, ...)
     local ok, err = pcall(fn, ...)
     if not ok and NS.DEBUG then
-        print("|cffff0000BlizzPlatesFix error in module:|r", name, err)
+        print("|cffff0000" .. NS.L("BlizzPlatesFix error in module:") .. "|r", name, err)
     end
 end
 

@@ -63,7 +63,7 @@ function NS.Engine.SafeCall(func, ...)
 
     local ok, err = pcall(func, ...)
     if not ok and NS.DEBUG then
-        print("|cffff0000BlizzPlatesFix error:|r", err)
+        print("|cffff0000" .. NS.L("BlizzPlatesFix error:") .. "|r", err)
     end
 end
 
@@ -133,6 +133,20 @@ end
 -- Публичный API обновлений
 -- =============================================================
 
+local function ConsumePendingMask(unit, fallbackMask)
+    local mask = fallbackMask or NS.REASON_ALL
+    local pending = PendingMask[unit]
+    if pending ~= nil then
+        if mask == NS.REASON_ALL or pending == NS.REASON_ALL then
+            mask = NS.REASON_ALL
+        else
+            mask = bor(mask, pending)
+        end
+        PendingMask[unit] = nil
+    end
+    return mask
+end
+
 -- Единый вход: поставить юнит в очередь (и опционально обновить сразу).
 -- reason: строка для отладки (можно nil)
 -- immediate: если true, дергает UpdateAllModules сразу (без ожидания тика)
@@ -141,11 +155,13 @@ function NS.Engine.RequestUpdate(unit, reason, immediate, reasonMask)
         LastReason[unit] = reason
     end
 
-    NS.Engine.QueueUnitUpdate(unit, reasonMask)
-
     if immediate then
-        NS.Engine.SafeCall(NS.UpdateAllModules, unit, reasonMask or NS.REASON_ALL)
+        local mask = ConsumePendingMask(unit, reasonMask or NS.REASON_ALL)
+        NS.Engine.SafeCall(NS.UpdateAllModules, unit, mask)
+        return
     end
+
+    NS.Engine.QueueUnitUpdate(unit, reasonMask)
 end
 
 -- Поставить все активные в очередь (и опционально обновить сразу)
@@ -154,11 +170,12 @@ function NS.Engine.RequestUpdateAll(reason, immediate, reasonMask)
         LastReason.__all = reason
     end
 
-    NS.Engine.QueueAllActive(reasonMask)
-
     if immediate then
-        NS.Engine.FlushAllNow()
+        NS.Engine.FlushAllNow(reasonMask or NS.REASON_ALL, true)
+        return
     end
+
+    NS.Engine.QueueAllActive(reasonMask)
 end
 
 -- Debug accessor intentionally not exported in release builds.
@@ -229,10 +246,22 @@ function NS.Engine.FlushPending(maxPerTick)
 end
 
 -- Немедленно обновить все активные (используется в ForceUpdateAll/настройках).
-function NS.Engine.FlushAllNow()
+-- По умолчанию также поглощает уже накопленные pending-маски, чтобы immediate/full refresh
+-- не дублировался на следующем FlushPending().
+function NS.Engine.FlushAllNow(reasonMask, consumePending)
     if not NS.ActiveNamePlates then return end
+
+    local baseMask = reasonMask or NS.REASON_ALL
+    if consumePending == nil then
+        consumePending = true
+    end
+
     for unitToken in pairs(NS.ActiveNamePlates) do
-        NS.Engine.SafeCall(NS.UpdateAllModules, unitToken, NS.REASON_ALL)
+        local mask = baseMask
+        if consumePending then
+            mask = ConsumePendingMask(unitToken, baseMask)
+        end
+        NS.Engine.SafeCall(NS.UpdateAllModules, unitToken, mask)
     end
 end
 
