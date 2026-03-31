@@ -90,64 +90,22 @@ local function GetNameWithOptionalTitle(unit, fallbackName, db, rpState)
     return fallbackName
 end
 
-local function GetUnitColor(unit, db)
-    if db.nameColorMode == 2 then
-        local enemyNpcDB = NS.Config and NS.Config.GetTable and NS.Config.GetTable(NS.UNIT_TYPES.ENEMY_NPC)
-        local friendlyNpcDB = NS.Config and NS.Config.GetTable and NS.Config.GetTable(NS.UNIT_TYPES.FRIENDLY_NPC)
-
-        local c
-        if enemyNpcDB and db == enemyNpcDB then
-            local reaction = UnitReaction(unit, "player")
-            if reaction == 4 then
-                c = db.nameColorNeutral or db.nameColor
-            else
-                c = db.nameColorHostile or db.nameColor
-            end
-        elseif friendlyNpcDB and db == friendlyNpcDB then
-            local reaction = UnitReaction(unit, "player")
-            if reaction == 4 then
-                c = db.nameColorNeutral or db.nameColor
-            else
-                c = db.nameColorFriendly or db.nameColor
-            end
-        else
-            c = db.nameColor
-        end
-
-        if not c then return 1, 1, 1 end
-        return c.r, c.g, c.b
-    end
-
-    -- Mode 3: Реакция (включая игроков)
-    if db.nameColorMode == 3 then
-        local reaction = UnitReaction(unit, "player")
-        if reaction == 4 and UnitCanAttack("player", unit) then
-            local threat = UnitThreatSituation("player", unit)
-            if threat ~= nil then
-                return 1, 0.1, 0.1
-            end
-        end
-        return UnitSelectionColor(unit)
-    end
-
-    -- Mode 1: Авто (игроки: класс, NPC: реакция)
-    if UnitIsPlayer(unit) or (UnitTreatAsPlayerForDisplay and UnitTreatAsPlayerForDisplay(unit)) then
-        local _, classFilename = UnitClass(unit)
-        if classFilename then
-            local color = C_ClassColor.GetClassColor(classFilename)
-            if color then return color.r, color.g, color.b end
-        end
+local function GetUnitColor(unit, db, gdb)
+    if not (NS.UnitColor and NS.UnitColor.GetColor) then
         return 1, 1, 1
-    else
-        local reaction = UnitReaction(unit, "player")
-        if reaction == 4 and UnitCanAttack("player", unit) then
-            local threat = UnitThreatSituation("player", unit)
-            if threat ~= nil then
-                return 1, 0.1, 0.1
-            end
-        end
-        return UnitSelectionColor(unit)
     end
+
+    return NS.UnitColor.GetColor(
+        unit,
+        db,
+        gdb,
+        "nameColorMode",
+        "nameColor",
+        "nameColorHostile",
+        "nameColorFriendly",
+        "nameColorNeutral",
+        0.5, 0.5, 0.5
+    )
 end
 
 local function EnsureBlizzNameHooks(frame, st)
@@ -361,7 +319,7 @@ local function ApplyStyle(frame, st, unit, db, gdb)
         st.lastShadow = wantShadow
     end
 
-    local r, g, b = GetUnitColor(unit, db)
+    local r, g, b = GetUnitColor(unit, db, gdb)
     if st.lastColorR ~= r or st.lastColorG ~= g or st.lastColorB ~= b then
         fs:SetTextColor(r, g, b)
         st.lastColorR, st.lastColorG, st.lastColorB = r, g, b

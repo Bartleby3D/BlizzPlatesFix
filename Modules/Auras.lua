@@ -1,17 +1,22 @@
 local _, NS = ...
 
 -- ============================================================================
--- 1. PANDEMIC CURVE
+-- 1. PANDEMIC TIMER COLOR
 -- ============================================================================
-local pandemicCurve
-if C_CurveUtil then
-    pandemicCurve = C_CurveUtil.CreateCurve()
-    pandemicCurve:SetType(Enum.LuaCurveType.Step)
-    pandemicCurve:AddPoint(0, 1)
-    pandemicCurve:AddPoint(0.3, 0)
-end
 
 local State = setmetatable({}, { __mode = "k" })
+local StopAuraHighlight
+local TrackPandemicIcon
+local UntrackPandemicIcon
+local ApplyAuraHighlightLayout
+
+local function HideAuraIcon(icon)
+    if not icon then return end
+    if StopAuraHighlight then
+        StopAuraHighlight(icon)
+    end
+    icon:Hide()
+end
 
 local function GetState(frame)
     if not State[frame] then
@@ -27,9 +32,9 @@ end
 
 local function HideAuraPools(frame)
     local st = GetState(frame)
-    for _, icon in ipairs(st.buffs) do icon:Hide() end
-    for _, icon in ipairs(st.debuffs) do icon:Hide() end
-    for _, icon in ipairs(st.cc) do icon:Hide() end
+    for _, icon in ipairs(st.buffs) do HideAuraIcon(icon) end
+    for _, icon in ipairs(st.debuffs) do HideAuraIcon(icon) end
+    for _, icon in ipairs(st.cc) do HideAuraIcon(icon) end
 end
 
 -- ============================================================================
@@ -40,6 +45,10 @@ end
 -- Use canaccessvalue() to safely read them.
 local SafeBool = NS.SafeBool
 local SafeValue = NS.SafeValue
+
+local PixelSnapValue = NS.PixelSnapValue
+local PixelSnapSetSize = NS.PixelSnapSetSize
+local PixelSnapSetPoint = NS.PixelSnapSetPoint
 
 -- ==========================================================================
 -- IMPORTANT AURAS (Blizzard nameplate filters)
@@ -105,11 +114,192 @@ local function GetCooldownFontString(cd)
     return nil
 end
 
+local PANDEMIC_TASK_NAME = "auras_pandemic_timer_color"
+local PANDEMIC_TIMER_INTERVAL = 0.10
+local HIGHLIGHT_GOLD_R, HIGHLIGHT_GOLD_G, HIGHLIGHT_GOLD_B, HIGHLIGHT_GOLD_A = 1.00, 0.95, 0.20, 1.00
+local PANDEMIC_RED_R, PANDEMIC_RED_G, PANDEMIC_RED_B, PANDEMIC_RED_A = 1.00, 0.18, 0.18, 1.00
+local PandemicIcons = setmetatable({}, { __mode = "k" })
+local PandemicIconsCount = 0
+local PandemicTaskRegistered = false
+
+local function SetCooldownTextColor(icon, r, g, b, a)
+    local cdText = icon and icon.cd and GetCooldownFontString(icon.cd)
+    if cdText then
+        cdText:SetTextColor(r or 1, g or 1, b or 1, a or 1)
+    end
+end
+
+local function BuildPandemicColorCurve(r, g, b, a)
+    if not (C_CurveUtil and C_CurveUtil.CreateColorCurve and CreateColor) then return nil end
+
+    local curve = C_CurveUtil.CreateColorCurve()
+    curve:SetType(Enum.LuaCurveType.Step)
+    curve:AddPoint(0.00, CreateColor(PANDEMIC_RED_R, PANDEMIC_RED_G, PANDEMIC_RED_B, PANDEMIC_RED_A))
+    curve:AddPoint(0.25, CreateColor(r or 1, g or 1, b or 1, a or 1))
+    return curve
+end
+
+local function ApplyBaseCooldownTextColor(icon, color)
+    local r, g, b, a = 1, 1, 1, 1
+    if type(color) == "table" then
+        r = color.r or 1
+        g = color.g or 1
+        b = color.b or 1
+        a = color.a or 1
+    end
+
+    local changed = (icon._BPF_BaseTimeColorR ~= r)
+        or (icon._BPF_BaseTimeColorG ~= g)
+        or (icon._BPF_BaseTimeColorB ~= b)
+        or (icon._BPF_BaseTimeColorA ~= a)
+
+    icon._BPF_BaseTimeColorR = r
+    icon._BPF_BaseTimeColorG = g
+    icon._BPF_BaseTimeColorB = b
+    icon._BPF_BaseTimeColorA = a
+
+    if changed or not icon._BPF_PandemicColorCurve then
+        icon._BPF_PandemicColorCurve = BuildPandemicColorCurve(r, g, b, a)
+    end
+
+    SetCooldownTextColor(icon, r, g, b, a)
+end
+
+local function RestoreCooldownTextColor(icon)
+    if not icon then return end
+    SetCooldownTextColor(
+        icon,
+        icon._BPF_BaseTimeColorR or 1,
+        icon._BPF_BaseTimeColorG or 1,
+        icon._BPF_BaseTimeColorB or 1,
+        icon._BPF_BaseTimeColorA or 1
+    )
+end
+
+local function SetPandemicTaskEnabled(enabled)
+    if NS.Engine and NS.Engine.EnableFastTask then
+        NS.Engine.EnableFastTask(PANDEMIC_TASK_NAME, enabled and PandemicIconsCount > 0)
+    end
+end
+
+local function ApplyPandemicCurveColor(icon, pandemicColor)
+    if pandemicColor and pandemicColor.GetRGBA then
+        SetCooldownTextColor(icon, pandemicColor:GetRGBA())
+    else
+        RestoreCooldownTextColor(icon)
+    end
+end
+
+local function UpdatePandemicTimerColor(icon, durationInfo)
+    local colorCurve = icon and icon._BPF_PandemicColorCurve or nil
+    if not (icon and durationInfo and colorCurve) then
+        RestoreCooldownTextColor(icon)
+        return
+    end
+
+    ApplyPandemicCurveColor(icon, durationInfo:EvaluateRemainingPercent(colorCurve))
+end
+
+local function UpdatePreviewPandemicTimerColor(icon, remaining, duration)
+    local colorCurve = icon and icon._BPF_PandemicColorCurve or nil
+    if not (icon and colorCurve and duration and duration > 0 and remaining) then
+        RestoreCooldownTextColor(icon)
+        return
+    end
+
+    local percent = remaining / duration
+    if percent < 0 then
+        percent = 0
+    elseif percent > 1 then
+        percent = 1
+    end
+
+    if colorCurve.Evaluate then
+        ApplyPandemicCurveColor(icon, colorCurve:Evaluate(percent))
+    else
+        RestoreCooldownTextColor(icon)
+    end
+end
+
+local function PandemicFastTick()
+    local stale
+
+    for icon in pairs(PandemicIcons) do
+        local durationInfo = icon and icon._BPF_PandemicDurationInfo or nil
+        local valid = icon
+            and icon:IsShown()
+            and icon.cd
+            and icon.cd:IsShown()
+            and durationInfo
+            and icon._BPF_PandemicColorCurve
+
+        if valid then
+            UpdatePandemicTimerColor(icon, durationInfo)
+        else
+            stale = stale or {}
+            stale[#stale + 1] = icon
+        end
+    end
+
+    if stale then
+        for i = 1, #stale do
+            UntrackPandemicIcon(stale[i])
+        end
+    end
+end
+
+local function RegisterPandemicFastTask()
+    if PandemicTaskRegistered then return end
+    if not (NS.Engine and NS.Engine.RegisterFastTask and NS.Engine.EnableFastTask) then return end
+
+    NS.Engine.RegisterFastTask(PANDEMIC_TASK_NAME, PANDEMIC_TIMER_INTERVAL, PandemicFastTick)
+    NS.Engine.EnableFastTask(PANDEMIC_TASK_NAME, false)
+    PandemicTaskRegistered = true
+end
+
+TrackPandemicIcon = function(icon, durationInfo)
+    if not (icon and durationInfo and C_CurveUtil and C_CurveUtil.CreateColorCurve) then
+        UntrackPandemicIcon(icon)
+        return
+    end
+
+    if not PandemicTaskRegistered then
+        RegisterPandemicFastTask()
+    end
+
+    icon._BPF_PandemicDurationInfo = durationInfo
+
+    if not PandemicIcons[icon] then
+        PandemicIcons[icon] = true
+        PandemicIconsCount = PandemicIconsCount + 1
+    end
+
+    UpdatePandemicTimerColor(icon, durationInfo)
+    SetPandemicTaskEnabled(true)
+end
+
+UntrackPandemicIcon = function(icon)
+    if not icon then return end
+
+    icon._BPF_PandemicDurationInfo = nil
+    if PandemicIcons[icon] then
+        PandemicIcons[icon] = nil
+        PandemicIconsCount = math.max(0, PandemicIconsCount - 1)
+    end
+
+    RestoreCooldownTextColor(icon)
+    SetPandemicTaskEnabled(true)
+end
+
 
 local function ApplyIconRect(icon, width, height)
     if not icon or not icon.tex or not width or not height then return end
 
-    icon:SetSize(width, height)
+    PixelSnapSetSize(icon, width, height, 1, 1)
+
+    if icon.AuraHighlightBorder then
+        ApplyAuraHighlightLayout(icon)
+    end
 
     -- Сохраняем квадратную картинку без растяжения: режем TexCoord под прямоугольник
     local baseMin, baseMax = 0.08, 0.92
@@ -144,12 +334,8 @@ local function ApplyAuraTextStyle(icon, fontPath, timeSize, timeX, timeY, timeCo
         local _, _, flags = cdText:GetFont()
         cdText:SetFont(fontPath, timeSize, flags)
         cdText:ClearAllPoints()
-        cdText:SetPoint("CENTER", icon.cd, "CENTER", timeX, timeY)
-        if type(timeColor) == "table" then
-            cdText:SetTextColor(timeColor.r or 1, timeColor.g or 1, timeColor.b or 1, timeColor.a or 1)
-        else
-            cdText:SetTextColor(1, 1, 1, 1)
-        end
+        PixelSnapSetPoint(cdText, "CENTER", icon.cd, "CENTER", timeX, timeY, 0, 0)
+        ApplyBaseCooldownTextColor(icon, timeColor)
     end
 
     -- Стаки
@@ -157,7 +343,7 @@ local function ApplyAuraTextStyle(icon, fontPath, timeSize, timeX, timeY, timeCo
         local _, _, flags = icon.count:GetFont()
         icon.count:SetFont(fontPath, stackSize, flags)
         icon.count:ClearAllPoints()
-        icon.count:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", stackX, stackY)
+        PixelSnapSetPoint(icon.count, "BOTTOMRIGHT", icon, "BOTTOMRIGHT", stackX, stackY, 0, 0)
         if type(stackColor) == "table" then
             icon.count:SetTextColor(stackColor.r or 1, stackColor.g or 1, stackColor.b or 1, stackColor.a or 1)
         else
@@ -235,12 +421,15 @@ local function ApplyAuraBorderStyle(icon, borderEnabled, thickness, borderColor)
     if not icon or not icon.border then return end
 
     if borderEnabled == false then
+        icon._BPF_BorderThickness = 0
         icon.border:Hide()
         return
     end
 
     thickness = tonumber(thickness) or 2
     if thickness < 0 then thickness = 0 end
+    thickness = PixelSnapValue(icon, thickness, thickness > 0 and 1 or 0)
+    icon._BPF_BorderThickness = thickness
 
     -- IMPORTANT: border uses a solid-color texture. If its base color is black,
     -- VertexColor multiplication will always stay black. Ensure base is white
@@ -250,8 +439,8 @@ local function ApplyAuraBorderStyle(icon, borderEnabled, thickness, borderColor)
     end
 
     icon.border:ClearAllPoints()
-    icon.border:SetPoint("TOPLEFT", icon, "TOPLEFT", -thickness, thickness)
-    icon.border:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", thickness, -thickness)
+    PixelSnapSetPoint(icon.border, "TOPLEFT", icon, "TOPLEFT", -thickness, thickness, thickness > 0 and 1 or 0, thickness > 0 and 1 or 0)
+    PixelSnapSetPoint(icon.border, "BOTTOMRIGHT", icon, "BOTTOMRIGHT", thickness, -thickness, thickness > 0 and 1 or 0, thickness > 0 and 1 or 0)
 
     if type(borderColor) == "table" then
         icon.border:SetVertexColor(borderColor.r or 0, borderColor.g or 0, borderColor.b or 0, borderColor.a or 1)
@@ -266,22 +455,125 @@ local function ApplyAuraBorderStyle(icon, borderEnabled, thickness, borderColor)
     end
 end
 
-local function SetDispelGlow(icon, enabled)
+local AURA_HIGHLIGHT_INSET = 0
+local AURA_HIGHLIGHT_THICKNESS = 2
+
+ApplyAuraHighlightLayout = function(icon)
+    if not icon or not icon.AuraHighlightBorder then return end
+
+    local border = icon.AuraHighlightBorder
+    local inset = PixelSnapValue(icon, AURA_HIGHLIGHT_INSET, 0)
+    local thickness = PixelSnapValue(icon, AURA_HIGHLIGHT_THICKNESS, 1)
+
+    if border.top then
+        border.top:ClearAllPoints()
+        PixelSnapSetPoint(border.top, "TOPLEFT", icon, "TOPLEFT", inset, -inset, 0, 0)
+        PixelSnapSetPoint(border.top, "TOPRIGHT", icon, "TOPRIGHT", -inset, -inset, 0, 0)
+        border.top:SetHeight(thickness)
+    end
+
+    if border.bottom then
+        border.bottom:ClearAllPoints()
+        PixelSnapSetPoint(border.bottom, "BOTTOMLEFT", icon, "BOTTOMLEFT", inset, inset, 0, 0)
+        PixelSnapSetPoint(border.bottom, "BOTTOMRIGHT", icon, "BOTTOMRIGHT", -inset, inset, 0, 0)
+        border.bottom:SetHeight(thickness)
+    end
+
+    if border.left then
+        border.left:ClearAllPoints()
+        PixelSnapSetPoint(border.left, "TOPLEFT", icon, "TOPLEFT", inset, -inset, 0, 0)
+        PixelSnapSetPoint(border.left, "BOTTOMLEFT", icon, "BOTTOMLEFT", inset, inset, 0, 0)
+        border.left:SetWidth(thickness)
+    end
+
+    if border.right then
+        border.right:ClearAllPoints()
+        PixelSnapSetPoint(border.right, "TOPRIGHT", icon, "TOPRIGHT", -inset, -inset, 0, 0)
+        PixelSnapSetPoint(border.right, "BOTTOMRIGHT", icon, "BOTTOMRIGHT", -inset, inset, 0, 0)
+        border.right:SetWidth(thickness)
+    end
+end
+
+local function EnsureAuraHighlightBorder(icon)
+    if icon.AuraHighlightBorder then
+        ApplyAuraHighlightLayout(icon)
+        return icon.AuraHighlightBorder
+    end
+
+    local border = {}
+
+    local top = icon:CreateTexture(nil, "OVERLAY", nil, 1)
+    top:SetColorTexture(1, 1, 1, 1)
+    top:Hide()
+    border.top = top
+
+    local bottom = icon:CreateTexture(nil, "OVERLAY", nil, 1)
+    bottom:SetColorTexture(1, 1, 1, 1)
+    bottom:Hide()
+    border.bottom = bottom
+
+    local left = icon:CreateTexture(nil, "OVERLAY", nil, 1)
+    left:SetColorTexture(1, 1, 1, 1)
+    left:Hide()
+    border.left = left
+
+    local right = icon:CreateTexture(nil, "OVERLAY", nil, 1)
+    right:SetColorTexture(1, 1, 1, 1)
+    right:Hide()
+    border.right = right
+
+    icon.AuraHighlightBorder = border
+    ApplyAuraHighlightLayout(icon)
+    return border
+end
+
+local function HideAuraHighlightBorder(icon)
+    local border = icon and icon.AuraHighlightBorder
+    if not border then return end
+
+    if border.top then border.top:Hide() end
+    if border.bottom then border.bottom:Hide() end
+    if border.left then border.left:Hide() end
+    if border.right then border.right:Hide() end
+end
+
+StopAuraHighlight = function(icon)
     if not icon then return end
 
-    -- Prefer Blizzard overlay glow if available
-    if _G.ActionButton_ShowOverlayGlow and _G.ActionButton_HideOverlayGlow then
-        if enabled then
-            pcall(_G.ActionButton_ShowOverlayGlow, icon)
-        else
-            pcall(_G.ActionButton_HideOverlayGlow, icon)
-        end
+    UntrackPandemicIcon(icon)
+    HideAuraHighlightBorder(icon)
+end
+
+local function SetAuraHighlight(icon, enabled, r, g, b, a)
+    if not icon then return end
+
+    if not enabled then
+        HideAuraHighlightBorder(icon)
         return
     end
 
-    -- Fallback: simple pulsing glow texture
-    if not icon.DispelGlow then return end
-    icon.DispelGlow:SetShown(enabled and true or false)
+    local border = EnsureAuraHighlightBorder(icon)
+    local red = r or HIGHLIGHT_GOLD_R
+    local green = g or HIGHLIGHT_GOLD_G
+    local blue = b or HIGHLIGHT_GOLD_B
+    local alpha = a or HIGHLIGHT_GOLD_A
+
+    if border.top then
+        border.top:SetVertexColor(red, green, blue, alpha)
+        border.top:Show()
+    end
+    if border.bottom then
+        border.bottom:SetVertexColor(red, green, blue, alpha)
+        border.bottom:Show()
+    end
+    if border.left then
+        border.left:SetVertexColor(red, green, blue, alpha)
+        border.left:Show()
+    end
+    if border.right then
+        border.right:SetVertexColor(red, green, blue, alpha)
+        border.right:Show()
+    end
 end
 
 -- ============================================================================
@@ -290,17 +582,16 @@ end
 local function GetIcon(frame, pool, index)
     if not pool[index] then
         local icon = CreateFrame("Frame", nil, frame)
-        
+
         icon.border = icon:CreateTexture(nil, "BACKGROUND", nil, -7)
-	    -- Use white base so VertexColor can tint the border.
-	    icon.border:SetColorTexture(1, 1, 1, 1)
-        icon.border:SetPoint("TOPLEFT", icon, "TOPLEFT", -2, 2)
-        icon.border:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", 2, -2)
-        
+        icon.border:SetColorTexture(1, 1, 1, 1)
+        PixelSnapSetPoint(icon.border, "TOPLEFT", icon, "TOPLEFT", -2, 2, 1, 1)
+        PixelSnapSetPoint(icon.border, "BOTTOMRIGHT", icon, "BOTTOMRIGHT", 2, -2, 1, 1)
+
         icon.tex = icon:CreateTexture(nil, "BACKGROUND")
         icon.tex:SetAllPoints()
         icon.tex:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-        
+
         icon.cd = CreateFrame("Cooldown", nil, icon, "CooldownFrameTemplate")
         icon.cd:SetAllPoints()
         icon.cd:SetReverse(true)
@@ -308,44 +599,11 @@ local function GetIcon(frame, pool, index)
         icon.cd:SetDrawSwipe(true)
         icon.cd:SetHideCountdownNumbers(false)
         icon.cd:SetCountdownAbbrevThreshold(20)
-        
-        icon.Pandemic = CreateFrame("Frame", nil, icon)
-        icon.Pandemic:SetAllPoints()
-        icon.Pandemic:SetAlpha(0)
-        
-        icon.Pandemic.Glow = icon.Pandemic:CreateTexture(nil, "OVERLAY")
-        icon.Pandemic.Glow:SetAllPoints()
-        icon.Pandemic.Glow:SetTexture("Interface\\Buttons\\WHITE8x8")
-        icon.Pandemic.Glow:SetVertexColor(1, 0, 0)
-        icon.Pandemic.Glow:SetBlendMode("ADD")
-        
-        local ag = icon.Pandemic.Glow:CreateAnimationGroup()
-        ag:SetLooping("REPEAT")
-        local a1 = ag:CreateAnimation("Alpha")
-        a1:SetFromAlpha(0.2); a1:SetToAlpha(0.6); a1:SetDuration(0.6); a1:SetSmoothing("IN_OUT")
-        local a2 = ag:CreateAnimation("Alpha")
-        a2:SetFromAlpha(0.6); a2:SetToAlpha(0.2); a2:SetDuration(0.6); a2:SetSmoothing("IN_OUT"); a2:SetOrder(2)
-        ag:Play()
 
-        -- Dispel glow (fallback). Prefer ActionButton_* overlay glow when available.
-        icon.DispelGlow = icon:CreateTexture(nil, "OVERLAY")
-        icon.DispelGlow:SetAllPoints()
-        icon.DispelGlow:SetTexture("Interface\\Buttons\\WHITE8x8")
-        icon.DispelGlow:SetVertexColor(1, 1, 0, 0.45)
-        icon.DispelGlow:SetBlendMode("ADD")
-        icon.DispelGlow:Hide()
-
-        local dg = icon.DispelGlow:CreateAnimationGroup()
-        dg:SetLooping("REPEAT")
-        local d1 = dg:CreateAnimation("Alpha")
-        d1:SetFromAlpha(0.10); d1:SetToAlpha(0.55); d1:SetDuration(0.55); d1:SetSmoothing("IN_OUT")
-        local d2 = dg:CreateAnimation("Alpha")
-        d2:SetFromAlpha(0.55); d2:SetToAlpha(0.10); d2:SetDuration(0.55); d2:SetSmoothing("IN_OUT"); d2:SetOrder(2)
-        dg:Play()
-        
         icon.count = icon:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        icon.count:SetPoint("BOTTOMRIGHT", 2, -2)
-        
+        PixelSnapSetPoint(icon.count, "BOTTOMRIGHT", icon, "BOTTOMRIGHT", 2, -2, 0, 0)
+
+
         pool[index] = icon
     end
     return pool[index]
@@ -397,7 +655,7 @@ local function ProcessAuraCategory(frame, unit, db, gdb, auraType, ignoreMap)
     elseif auraType == "CC" then
         pool = st.cc
         enabled = db.ccEnable
-        filter = "HARMFUL|CROWD_CONTROL"
+        filter = db.ccOnlyMine and "HARMFUL|CROWD_CONTROL|PLAYER" or "HARMFUL|CROWD_CONTROL"
         size = db.ccSize or 26
         posX = db.ccX or 0
         posY = db.ccY or 65
@@ -435,14 +693,14 @@ local function ProcessAuraCategory(frame, unit, db, gdb, auraType, ignoreMap)
 
     if not enabled then
         -- Скрываем иконки выключенного пула
-        for _, icon in ipairs(pool) do icon:Hide() end
+        for _, icon in ipairs(pool) do HideAuraIcon(icon) end
         return
     end
 
     -- Data layer provides ordered auraInstanceID lists
     local ids = (NS.AurasData and NS.AurasData.GetIDs) and NS.AurasData.GetIDs(frame, auraType) or nil
     if not ids then
-        for _, icon in ipairs(pool) do icon:Hide() end
+        for _, icon in ipairs(pool) do HideAuraIcon(icon) end
         return
     end
     local usePandemic
@@ -570,18 +828,6 @@ end
             end
 
 
-
-            -- КОНТРОЛЬ: опционально показываем только мои эффекты.
-            -- isFromPlayerOrPlayerPet может быть secret; фильтруем только если значение доступно.
-            if show and auraType == "CC" and db.ccOnlyMine then
-                local mine = aura and aura.isFromPlayerOrPlayerPet
-                if _canaccessvalue and mine ~= nil and _canaccessvalue(mine) then
-                    if not mine then
-                        show = false
-                    end
-                end
-            end
-
             if show then
                 activeCount = activeCount + 1
                 local icon = GetIcon(frame, pool, activeCount)
@@ -634,45 +880,45 @@ end
                 elseif auraType == "BUFF" and (not isFriend) and db.buffsPurgeGlow then
                     dispelGlow = (NS and NS.IsEnemyBuffPurgeable) and NS.IsEnemyBuffPurgeable(aura) or false
                 end
-                SetDispelGlow(icon, dispelGlow)
+
+                local durationInfo = nil
 
                 if timerEnable == false then
                     icon.cd:Hide()
-                    icon.Pandemic:SetAlpha(0)
+                    UntrackPandemicIcon(icon)
                     icon:SetAlpha(renderAlpha)
                 else
                     icon.cd:SetDrawEdge(timerEdge and true or false)
                     icon.cd:SetHideCountdownNumbers(false)
-                
-                    local durationInfo = C_UnitAuras.GetAuraDuration(unit, aura.auraInstanceID)
-                
+
+                    durationInfo = C_UnitAuras.GetAuraDuration(unit, aura.auraInstanceID)
+
                     if durationInfo then
                         -- Передаем таймер всегда, чтобы избежать Taint-ошибок
                         icon.cd:SetCooldownFromDurationObject(durationInfo)
                         icon.cd:Show()
-                
-                        -- 1. Вычисляем прозрачность таймера (CooldownFrame) на стороне C-движка.
+
                         -- Если IsZero (вечная аура), Alpha будет 0. Если обычная аура, Alpha будет 1.
                         local cdAlpha = C_CurveUtil.EvaluateColorValueFromBoolean(durationInfo:IsZero(), 0, 1)
                         icon.cd:SetAlpha(cdAlpha)
-
-                        -- 2. Прозрачность самой иконки
                         icon:SetAlpha(renderAlpha)
-                
-                        -- 3. Красное свечение пандемика (отключаем для вечных)
-                        if usePandemic and pandemicCurve then
-                            local panAlpha = C_CurveUtil.EvaluateColorValueFromBoolean(
-                                durationInfo:IsZero(), 0, durationInfo:EvaluateRemainingPercent(pandemicCurve)
-                            )
-                            icon.Pandemic:SetAlpha(panAlpha)
-                        else
-                            icon.Pandemic:SetAlpha(0)
-                        end
                     else
                         icon.cd:Hide()
-                        icon.Pandemic:SetAlpha(0)
+                        UntrackPandemicIcon(icon)
                         icon:SetAlpha(renderAlpha)
                     end
+                end
+
+                if dispelGlow then
+                    SetAuraHighlight(icon, true, HIGHLIGHT_GOLD_R, HIGHLIGHT_GOLD_G, HIGHLIGHT_GOLD_B, HIGHLIGHT_GOLD_A)
+                else
+                    SetAuraHighlight(icon, false)
+                end
+
+                if timerEnable ~= false and usePandemic and durationInfo then
+                    TrackPandemicIcon(icon, durationInfo)
+                else
+                    UntrackPandemicIcon(icon)
                 end
 
                 if ignoreMap then ignoreMap[aura.auraInstanceID] = true end
@@ -686,7 +932,8 @@ end
     if activeCount > 0 then
         spacing = spacing or 4
         -- Считаем точную длину всей полосы иконок
-        local layoutWidth = size * renderScale
+        local layoutWidth = PixelSnapValue(frame, size * renderScale, 1)
+        spacing = PixelSnapValue(frame, spacing, 0)
         local totalWidth = (activeCount * layoutWidth) + ((activeCount - 1) * spacing)
 
         for i = 1, activeCount do
@@ -695,20 +942,20 @@ end
             
             if i == 1 then
                 if align == "LEFT" then
-                    icon:SetPoint("BOTTOMLEFT", frame.healthBar, "TOPRIGHT", posX, posY)
+                    PixelSnapSetPoint(icon, "BOTTOMLEFT", frame.healthBar, "TOPRIGHT", posX, posY, 0, 0)
                 elseif align == "RIGHT" then
-                    icon:SetPoint("BOTTOMRIGHT", frame.healthBar, "TOPLEFT", posX, posY)
+                    PixelSnapSetPoint(icon, "BOTTOMRIGHT", frame.healthBar, "TOPLEFT", posX, posY, 0, 0)
                 else -- CENTER
                     -- Смещаем первую иконку влево на половину длины всей группы аур
-                    icon:SetPoint("BOTTOM", frame.healthBar, "TOP", posX - (totalWidth / 2) + (layoutWidth / 2), posY)
+                    PixelSnapSetPoint(icon, "BOTTOM", frame.healthBar, "TOP", posX - (totalWidth / 2) + (layoutWidth / 2), posY, 0, 0)
                 end
             else
                 if align == "RIGHT" then
                     -- Если привязка справа, ауры растут влево
-                    icon:SetPoint("RIGHT", pool[i-1], "LEFT", -spacing, 0)
+                    PixelSnapSetPoint(icon, "RIGHT", pool[i-1], "LEFT", -spacing, 0, 0, 0)
                 else
                     -- При привязке LEFT и CENTER ауры растут вправо
-                    icon:SetPoint("LEFT", pool[i-1], "RIGHT", spacing, 0)
+                    PixelSnapSetPoint(icon, "LEFT", pool[i-1], "RIGHT", spacing, 0, 0, 0)
                 end
             end
             icon:Show()
@@ -716,8 +963,8 @@ end
     end
 
     -- 3. Скрываем лишнее
-    for i = activeCount + 1, #pool do 
-        pool[i]:Hide() 
+    for i = activeCount + 1, #pool do
+        HideAuraIcon(pool[i])
     end
 end
 -- ============================================================================
@@ -766,7 +1013,7 @@ local function RenderPreviewCategory(frame, unit, db, gdb, auraType, list)
     end
 
     if not enabled or not list or #list == 0 then
-        for _, icon in ipairs(pool) do icon:Hide() end
+        for _, icon in ipairs(pool) do HideAuraIcon(icon) end
         return
     end
 
@@ -774,6 +1021,7 @@ local function RenderPreviewCategory(frame, unit, db, gdb, auraType, list)
     local activeCount = 0
     local now = GetTime()
     local isTarget = unit and UnitExists("target") and UnitIsUnit(unit, "target")
+    local isFriend = unit and UnitIsFriend("player", unit)
     spacing = spacing or 4
 
     local usePandemic
@@ -848,7 +1096,7 @@ local function RenderPreviewCategory(frame, unit, db, gdb, auraType, list)
         local renderHeight = (iconH or size) * renderScale
         ApplyIconRect(icon, renderWidth, renderHeight)
         ApplyAuraBorderStyle(icon, borderEnabled, borderThickness, borderColor)
-        SetDispelGlow(icon, false)
+        StopAuraHighlight(icon)
         icon.tex:SetTexture(a.icon)
 
         if stacksEnable == false then
@@ -892,8 +1140,7 @@ else
 end
 
 
-        local panAlpha = 0
-        if usePandemic and dur > 0 then
+        if timerEnable ~= false and usePandemic and dur > 0 then
             local remaining
 
             if startFromList then
@@ -905,17 +1152,23 @@ end
             if remaining < 0 then remaining = 0 end
             if remaining > dur then remaining = dur end
 
-            local remainingPct = remaining / dur
-
-            -- Эквивалент обычной pandemicCurve:
-            -- curve points: (0 -> 1), (0.3 -> 0), step
-            -- то есть glow активен в последних 30% длительности
-            if remaining > 0 and remainingPct <= 0.3 then
-                panAlpha = 1
-            end
+            UpdatePreviewPandemicTimerColor(icon, remaining, dur)
+        else
+            RestoreCooldownTextColor(icon)
         end
 
-        icon.Pandemic:SetAlpha(panAlpha)
+        local previewHighlight = false
+        if auraType == "DEBUFF" and isFriend and db.debuffsDispelGlow then
+            previewHighlight = (a.previewDispelGlow == true)
+        elseif auraType == "BUFF" and (not isFriend) and db.buffsPurgeGlow then
+            previewHighlight = (a.previewPurgeGlow == true)
+        end
+
+        if previewHighlight then
+            SetAuraHighlight(icon, true, HIGHLIGHT_GOLD_R, HIGHLIGHT_GOLD_G, HIGHLIGHT_GOLD_B, HIGHLIGHT_GOLD_A)
+        else
+            SetAuraHighlight(icon, false)
+        end
 
         if a.inactive then
             icon:SetAlpha(renderAlpha * 0.25)
@@ -928,7 +1181,8 @@ end
 
     -- Positioning (как в обычном режиме)
     if activeCount > 0 then
-        local layoutWidth = size * renderScale
+        local layoutWidth = PixelSnapValue(frame, size * renderScale, 1)
+        spacing = PixelSnapValue(frame, spacing, 0)
         local totalWidth = (activeCount * layoutWidth) + ((activeCount - 1) * spacing)
 
         for i = 1, activeCount do
@@ -937,17 +1191,17 @@ end
 
             if i == 1 then
                 if align == "LEFT" then
-                    icon:SetPoint("BOTTOMLEFT", frame.healthBar, "TOPRIGHT", posX, posY)
+                    PixelSnapSetPoint(icon, "BOTTOMLEFT", frame.healthBar, "TOPRIGHT", posX, posY, 0, 0)
                 elseif align == "RIGHT" then
-                    icon:SetPoint("BOTTOMRIGHT", frame.healthBar, "TOPLEFT", posX, posY)
+                    PixelSnapSetPoint(icon, "BOTTOMRIGHT", frame.healthBar, "TOPLEFT", posX, posY, 0, 0)
                 else -- CENTER
-                    icon:SetPoint("BOTTOM", frame.healthBar, "TOP", posX - (totalWidth / 2) + (layoutWidth / 2), posY)
+                    PixelSnapSetPoint(icon, "BOTTOM", frame.healthBar, "TOP", posX - (totalWidth / 2) + (layoutWidth / 2), posY, 0, 0)
                 end
             else
                 if align == "RIGHT" then
-                    icon:SetPoint("RIGHT", pool[i-1], "LEFT", -spacing, 0)
+                    PixelSnapSetPoint(icon, "RIGHT", pool[i-1], "LEFT", -spacing, 0, 0, 0)
                 else
-                    icon:SetPoint("LEFT", pool[i-1], "RIGHT", spacing, 0)
+                    PixelSnapSetPoint(icon, "LEFT", pool[i-1], "RIGHT", spacing, 0, 0, 0)
                 end
             end
             icon:Show()
@@ -955,7 +1209,7 @@ end
     end
 
     for i = activeCount + 1, #pool do
-        pool[i]:Hide()
+        HideAuraIcon(pool[i])
     end
 end
 
@@ -1043,3 +1297,4 @@ NS.Modules.Auras = {
         end
     end
 }
+

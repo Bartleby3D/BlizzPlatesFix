@@ -6,6 +6,9 @@ if not CR then return end
 local floor = CR.floor
 local max = CR.max
 local min = CR.min
+local PixelSnapValue = NS.PixelSnapValue
+local PixelSnapSetSize = NS.PixelSnapSetSize
+local PixelSnapSetPoint = NS.PixelSnapSetPoint
 
 local function EnsureModernTextures(slot)
     if slot.modernBg and slot.modernFill and slot.modernFillClip then return end
@@ -45,14 +48,14 @@ local function SetTextureFillMode(slot, tex, mode, reverseFill, insetX, insetY)
 
     tex:ClearAllPoints()
     if mode == "FULL" then
-        tex:SetPoint("TOPLEFT", insetX, -insetY)
-        tex:SetPoint("BOTTOMRIGHT", -insetX, insetY)
+        PixelSnapSetPoint(tex, "TOPLEFT", slot, "TOPLEFT", insetX, -insetY, 0, 0)
+        PixelSnapSetPoint(tex, "BOTTOMRIGHT", slot, "BOTTOMRIGHT", -insetX, insetY, 0, 0)
     elseif reverseFill then
-        tex:SetPoint("TOPRIGHT", slot, "TOPRIGHT", -insetX, -insetY)
-        tex:SetPoint("BOTTOMRIGHT", slot, "BOTTOMRIGHT", -insetX, insetY)
+        PixelSnapSetPoint(tex, "TOPRIGHT", slot, "TOPRIGHT", -insetX, -insetY, 0, 0)
+        PixelSnapSetPoint(tex, "BOTTOMRIGHT", slot, "BOTTOMRIGHT", -insetX, insetY, 0, 0)
     else
-        tex:SetPoint("TOPLEFT", slot, "TOPLEFT", insetX, -insetY)
-        tex:SetPoint("BOTTOMLEFT", slot, "BOTTOMLEFT", insetX, insetY)
+        PixelSnapSetPoint(tex, "TOPLEFT", slot, "TOPLEFT", insetX, -insetY, 0, 0)
+        PixelSnapSetPoint(tex, "BOTTOMLEFT", slot, "BOTTOMLEFT", insetX, insetY, 0, 0)
     end
 end
 
@@ -89,8 +92,8 @@ function CR.EnsureSlot(holder, st, index)
     slot.bg:SetColorTexture(0, 0, 0, 0.65)
 
     slot.fill = slot:CreateTexture(nil, "ARTWORK", nil, 1)
-    slot.fill:SetPoint("TOPLEFT", 1, -1)
-    slot.fill:SetPoint("BOTTOMRIGHT", -1, 1)
+    PixelSnapSetPoint(slot.fill, "TOPLEFT", slot, "TOPLEFT", 1, -1, 0, 0)
+    PixelSnapSetPoint(slot.fill, "BOTTOMRIGHT", slot, "BOTTOMRIGHT", -1, 1, 0, 0)
     slot.fill:SetColorTexture(1, 1, 1, 1)
 
     st.slots[index] = slot
@@ -117,8 +120,8 @@ function CR.ResetSlotStyle(slot)
         slot.fill:SetTexCoord(0, 1, 0, 1)
         slot.fill:SetColorTexture(1, 1, 1, 1)
         slot.fill:ClearAllPoints()
-        slot.fill:SetPoint("TOPLEFT", 1, -1)
-        slot.fill:SetPoint("BOTTOMRIGHT", -1, 1)
+        PixelSnapSetPoint(slot.fill, "TOPLEFT", slot, "TOPLEFT", 1, -1, 0, 0)
+        PixelSnapSetPoint(slot.fill, "BOTTOMRIGHT", slot, "BOTTOMRIGHT", -1, 1, 0, 0)
     end
 
     if slot.modernBg then
@@ -224,7 +227,7 @@ local function ApplyCustomVisual(slot, visualState, reverseFill, opts)
     end
 
     if opts and opts.fillWidth ~= nil then
-        slot.fill:SetWidth(opts.fillWidth)
+        slot.fill:SetWidth(PixelSnapValue(slot.fill, opts.fillWidth, (opts.fillWidth and opts.fillWidth > 0) and 1 or 0))
     end
 
     slot.visualState = visualState
@@ -289,20 +292,51 @@ local function ApplyModernVisual(slot, visualState, reverseFill, opts)
     slot.renderStyle = CR.STYLE_MODERN
 end
 
-function CR.UpdateSlotLayout(holder, st, count, width, height, spacing)
+function CR.UpdateSlotLayout(holder, st, count, width, height, spacing, renderStyle)
+    local usePixelSnap = (renderStyle ~= CR.STYLE_MODERN)
+
+    if usePixelSnap then
+        width = PixelSnapValue(holder, width, 1)
+        height = PixelSnapValue(holder, height, 1)
+        spacing = PixelSnapValue(holder, spacing, 0)
+    end
+
+    if st then
+        st.lastLayoutWidth = width
+        st.lastLayoutHeight = height
+        st.lastLayoutSpacing = spacing
+        st.lastInnerWidth = max(1, width - 2)
+    end
+
     local totalWidth = (count * width) + ((count - 1) * spacing)
-    holder:SetSize(totalWidth, height)
+    if usePixelSnap then
+        PixelSnapSetSize(holder, totalWidth, height, 1, 1)
+    else
+        holder:SetSize(totalWidth, height)
+    end
 
     for i = 1, count do
         local slot = CR.EnsureSlot(holder, st, i)
         slot:ClearAllPoints()
-        slot:SetSize(width, height)
+        if usePixelSnap then
+            PixelSnapSetSize(slot, width, height, 1, 1)
+        else
+            slot:SetSize(width, height)
+        end
         slot._bpfLayoutWidth = width
         slot._bpfLayoutHeight = height
         if i == 1 then
-            slot:SetPoint("LEFT", holder, "LEFT", 0, 0)
+            if usePixelSnap then
+                PixelSnapSetPoint(slot, "LEFT", holder, "LEFT", 0, 0, 0, 0)
+            else
+                slot:SetPoint("LEFT", holder, "LEFT", 0, 0)
+            end
         else
-            slot:SetPoint("LEFT", st.slots[i - 1], "RIGHT", spacing, 0)
+            if usePixelSnap then
+                PixelSnapSetPoint(slot, "LEFT", st.slots[i - 1], "RIGHT", spacing, 0, 0, 0)
+            else
+                slot:SetPoint("LEFT", st.slots[i - 1], "RIGHT", spacing, 0)
+            end
         end
         slot:Show()
     end
@@ -312,17 +346,26 @@ function CR.UpdateSlotLayout(holder, st, count, width, height, spacing)
     end
 end
 
-function CR.ApplyAnchor(frame, holder, offX, offY, anchorMode)
+function CR.ApplyAnchor(frame, holder, offX, offY, anchorMode, renderStyle)
     holder:ClearAllPoints()
 
     local dynamic = (anchorMode == 2)
     local castBar = frame and frame.castBar
     local castShown = dynamic and castBar and castBar:IsShown()
 
+    local usePixelSnap = (renderStyle ~= CR.STYLE_MODERN)
     if castShown then
-        holder:SetPoint("TOP", castBar, "BOTTOM", offX, offY)
+        if usePixelSnap then
+            PixelSnapSetPoint(holder, "TOP", castBar, "BOTTOM", offX, offY, 0, 0)
+        else
+            holder:SetPoint("TOP", castBar, "BOTTOM", offX, offY)
+        end
     else
-        holder:SetPoint("TOP", frame.healthBar, "BOTTOM", offX, offY)
+        if usePixelSnap then
+            PixelSnapSetPoint(holder, "TOP", frame.healthBar, "BOTTOM", offX, offY, 0, 0)
+        else
+            holder:SetPoint("TOP", frame.healthBar, "BOTTOM", offX, offY)
+        end
     end
 end
 
@@ -340,7 +383,7 @@ end
 function CR.RenderRuneSnapshot(st, count, snapshot, reverseFill, restoringAlpha, renderStyle, powerType)
     local r, g, b = CR.GetRuneColor()
     local order = CR.BuildRuneOrder(st, snapshot)
-    local innerWidth = max(1, (st and st.lastWidth or 16) - 2)
+    local innerWidth = max(1, (st and (st.lastInnerWidth or ((st.lastLayoutWidth or st.lastWidth or 16) - 2))) or 14)
     local skin = (renderStyle == CR.STYLE_MODERN) and CR.GetModernSkin(powerType) or nil
 
     st.runeSnapshot = snapshot

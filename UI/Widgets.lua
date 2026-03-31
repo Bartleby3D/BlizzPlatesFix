@@ -1,6 +1,10 @@
 local _, NS = ...
 NS.Widgets = {}
 
+local PixelSnapValue = NS.PixelSnapValue
+local PixelSnapSetSize = NS.PixelSnapSetSize
+local PixelSnapSetPoint = NS.PixelSnapSetPoint
+
 --=============================================================================
 -- 1. СТИЛЬ И КОНСТАНТЫ
 --=============================================================================
@@ -28,9 +32,9 @@ end
 
 function NS.CreateHeader(parent, text)
     local f = CreateFrame("Frame", nil, parent)
-    f:SetSize(200, 20)
+    PixelSnapSetSize(f, 200, 20, 1, 1)
     local h = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    h:SetPoint("LEFT", f, "LEFT", 0, 0)
+    PixelSnapSetPoint(h, "LEFT", f, "LEFT", 0, 0)
     h:SetText(text)
     h:SetTextColor(0, 0.6, 1)
     return f
@@ -39,10 +43,10 @@ end
 function NS.CreateDesc(parent, text, relativeRegion)
     if not text then return nil end
     local d = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    d:SetPoint("TOPLEFT", relativeRegion, "BOTTOMLEFT", 0, -2)
+    PixelSnapSetPoint(d, "TOPLEFT", relativeRegion, "BOTTOMLEFT", 0, -2)
     d:SetText(text)
     d:SetTextColor(0.5, 0.5, 0.5)
-    d:SetWidth(200)
+    d:SetWidth(PixelSnapValue(d, 200, 1))
     d:SetJustifyH("LEFT")
     d:SetWordWrap(true)
     return d
@@ -53,16 +57,16 @@ end
 --=============================================================================
 function NS.CreateModernSlider(parent, label, minV, maxV)
     local frame = CreateFrame("Frame", nil, parent)
-    frame:SetSize(220, 42)
+    PixelSnapSetSize(frame, 220, 42, 1, 1)
 
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    title:SetPoint("TOPLEFT", 0, 0)
+    PixelSnapSetPoint(title, "TOPLEFT", frame, "TOPLEFT", 0, 0)
     title:SetTextColor(unpack(NS.COLOR_TEXT_OFF))
     title:SetText(label)
 
     local s = CreateFrame("Slider", nil, frame, "BackdropTemplate")
-    s:SetPoint("TOPLEFT", 0, -20)
-    s:SetSize(160, 6)
+    PixelSnapSetPoint(s, "TOPLEFT", frame, "TOPLEFT", 0, -20)
+    PixelSnapSetSize(s, 160, 6, 1, 1)
     s:SetOrientation("HORIZONTAL")
     s:SetMinMaxValues(minV or 0, maxV or 100)
     s:SetValue(minV or 0)
@@ -72,24 +76,24 @@ function NS.CreateModernSlider(parent, label, minV, maxV)
 
     local thumb = s:CreateTexture(nil, "ARTWORK")
     thumb:SetTexture("Interface\\Buttons\\WHITE8X8")
-    thumb:SetSize(6, 16)
+    PixelSnapSetSize(thumb, 6, 16, 1, 1)
     thumb:SetVertexColor(unpack(NS.COLOR_ACCENT))
     s:SetThumbTexture(thumb)
     s:SetHitRectInsets(0, 0, -4, -4)
 
     local thumbGlow = s:CreateTexture(nil, "OVERLAY")
     thumbGlow:SetTexture("Interface\\Buttons\\WHITE8X8")
-    thumbGlow:SetSize(8, 18)
+    PixelSnapSetSize(thumbGlow, 8, 18, 1, 1)
     thumbGlow:SetVertexColor(1, 1, 1, 0.4)
-    thumbGlow:SetPoint("CENTER", thumb)
+    PixelSnapSetPoint(thumbGlow, "CENTER", thumb, "CENTER", 0, 0)
     thumbGlow:Hide()
 
     s:SetScript("OnEnter", function() thumbGlow:Show() end)
     s:SetScript("OnLeave", function() thumbGlow:Hide() end)
 
     local eb = CreateFrame("EditBox", nil, frame, "BackdropTemplate")
-    eb:SetSize(45, 20)
-    eb:SetPoint("LEFT", s, "RIGHT", 12, 0)
+    PixelSnapSetSize(eb, 45, 20, 1, 1)
+    PixelSnapSetPoint(eb, "LEFT", s, "RIGHT", 12, 0)
     eb:SetFontObject("GameFontHighlightSmall")
     eb:SetJustifyH("CENTER")
     NS.CreateBackdrop(eb, {0, 0, 0, 0.6}, NS.COLOR_BORDER)
@@ -131,18 +135,18 @@ end
 
 function NS.CreateModernCheckbox(parent, label)
     local cb = CreateFrame("CheckButton", nil, parent, "BackdropTemplate")
-    cb:SetSize(18, 18)
+    PixelSnapSetSize(cb, 18, 18, 1, 1)
     NS.CreateBackdrop(cb, {0, 0, 0, 0.5}, {0.3, 0.3, 0.3, 1})
 
     local check = cb:CreateTexture(nil, "OVERLAY")
     check:SetTexture("Interface\\Buttons\\WHITE8X8")
     check:SetVertexColor(unpack(NS.COLOR_ACCENT))
-    check:SetPoint("TOPLEFT", 3, -3)
-    check:SetPoint("BOTTOMRIGHT", -3, 3)
+    PixelSnapSetPoint(check, "TOPLEFT", cb, "TOPLEFT", 3, -3)
+    PixelSnapSetPoint(check, "BOTTOMRIGHT", cb, "BOTTOMRIGHT", -3, 3)
     cb:SetCheckedTexture(check)
 
     cb.Text = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    cb.Text:SetPoint("LEFT", cb, "RIGHT", 7, 0)
+    PixelSnapSetPoint(cb.Text, "LEFT", cb, "RIGHT", 7, 0)
     cb.Text:SetText(label)
 
     cb:SetScript("OnEnter", function(self) self:SetBackdropBorderColor(unpack(NS.COLOR_ACCENT)) end)
@@ -153,18 +157,18 @@ end
 
 function NS.CreateColorBox(parent, label)
     local frame = CreateFrame("Frame", nil, parent)
-    frame:SetSize(220, 25)
+    PixelSnapSetSize(frame, 220, 25, 1, 1)
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    title:SetPoint("LEFT", 30, 0)
+    PixelSnapSetPoint(title, "LEFT", frame, "LEFT", 30, 0)
     title:SetTextColor(unpack(NS.COLOR_TEXT_OFF))
     title:SetText(label)
     local box = CreateFrame("Button", nil, frame, "BackdropTemplate")
-    box:SetSize(18, 18)
-    box:SetPoint("LEFT", 0, 0)
+    PixelSnapSetSize(box, 18, 18, 1, 1)
+    PixelSnapSetPoint(box, "LEFT", frame, "LEFT", 0, 0)
     NS.CreateBackdrop(box, {0, 0, 0, 0.6}, {0, 0, 0, 1})
     local colorTex = box:CreateTexture(nil, "OVERLAY")
-    colorTex:SetPoint("TOPLEFT", 1, -1)
-    colorTex:SetPoint("BOTTOMRIGHT", -1, 1)
+    PixelSnapSetPoint(colorTex, "TOPLEFT", box, "TOPLEFT", 1, -1)
+    PixelSnapSetPoint(colorTex, "BOTTOMRIGHT", box, "BOTTOMRIGHT", -1, 1)
     colorTex:SetColorTexture(1, 1, 1)
     box:SetScript("OnEnter", function(self) self:SetBackdropBorderColor(1, 1, 1) end)
     box:SetScript("OnLeave", function(self) self:SetBackdropBorderColor(0, 0, 0) end)
@@ -182,14 +186,14 @@ function NS.CreateModernDropdown(parent, label, options, func, width)
     -- (width < 180) keep the wrapper the same width as the button so two can fit
     -- on one row in the Copy Profiles panel.
     local frameW = (width < 180) and width or (width + 40)
-    frame:SetSize(frameW, 45)
+    PixelSnapSetSize(frame, frameW, 45, 1, 1)
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    title:SetPoint("TOPLEFT", 0, 0)
+    PixelSnapSetPoint(title, "TOPLEFT", frame, "TOPLEFT", 0, 0)
     title:SetTextColor(unpack(NS.COLOR_TEXT_OFF))
     title:SetText(label)
     local btn = CreateFrame("Button", nil, frame, "BackdropTemplate")
-    btn:SetSize(width, 22)
-    btn:SetPoint("TOPLEFT", 0, -18)
+    PixelSnapSetSize(btn, width, 22, 1, 1)
+    PixelSnapSetPoint(btn, "TOPLEFT", frame, "TOPLEFT", 0, -18)
     NS.CreateBackdrop(btn, {0, 0, 0, 0.5}, {0.3, 0.3, 0.3, 1})
     btn:SetScript("OnEnter", function(self) self:SetBackdropBorderColor(unpack(NS.COLOR_ACCENT)) end)
     btn:SetScript("OnLeave", function(self) self:SetBackdropBorderColor(0.3, 0.3, 0.3, 1) end)
@@ -197,14 +201,14 @@ function NS.CreateModernDropdown(parent, label, options, func, width)
     arrow:SetTexture("Interface\\ChatFrame\\ChatFrameExpandArrow")
     arrow:SetDesaturated(true)
     arrow:SetVertexColor(unpack(NS.COLOR_ACCENT))
-    arrow:SetSize(10, 10)
-    arrow:SetPoint("RIGHT", -6, 0)
+    PixelSnapSetSize(arrow, 10, 10, 1, 1)
+    PixelSnapSetPoint(arrow, "RIGHT", btn, "RIGHT", -6, 0)
     -- Default state: arrow points to the right. When the list is open, rotate it to point up.
     if arrow.SetRotation then
         arrow:SetRotation(0)
     end
     btn.Text = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    btn.Text:SetPoint("LEFT", 8, 0)
+    PixelSnapSetPoint(btn.Text, "LEFT", btn, "LEFT", 8, 0)
     local function ResolveOptions()
         if type(options) == "function" then
             local ok, res = pcall(options)
@@ -225,7 +229,7 @@ function NS.CreateModernDropdown(parent, label, options, func, width)
     local function BuildList(listFrame, btnFrame, opts)
         ClearListChildren(listFrame)
         local count = opts and #opts or 0
-        listFrame:SetSize(width, count * 20 + 10)
+        PixelSnapSetSize(listFrame, width, count * 20 + 10, 1, 1)
         if not opts then return end
         for i, optName in ipairs(opts) do
             local display, value = optName, optName
@@ -234,10 +238,10 @@ function NS.CreateModernDropdown(parent, label, options, func, width)
                 value = optName.value
             end
             local opt = CreateFrame("Button", nil, listFrame)
-            opt:SetSize(math.max(10, width - 10), 18)
-            opt:SetPoint("TOPLEFT", 5, -5 - (i-1) * 20)
+            PixelSnapSetSize(opt, math.max(10, width - 10), 18, 1, 1)
+            PixelSnapSetPoint(opt, "TOPLEFT", listFrame, "TOPLEFT", 5, -5 - (i-1) * 20)
             local ot = opt:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-            ot:SetPoint("LEFT", 5, 0)
+            PixelSnapSetPoint(ot, "LEFT", opt, "LEFT", 5, 0)
             ot:SetText(display)
             opt:SetScript("OnEnter", function() ot:SetTextColor(unpack(NS.COLOR_ACCENT)) end)
             opt:SetScript("OnLeave", function() ot:SetTextColor(1, 1, 1) end)
@@ -258,9 +262,9 @@ function NS.CreateModernDropdown(parent, label, options, func, width)
     local listParent = NS.DropdownParent or UIParent
     local list = CreateFrame("Frame", nil, listParent, "BackdropTemplate")
     list:ClearAllPoints()
-    list:SetPoint("TOPLEFT", btn, "BOTTOMLEFT", 0, -1)
+    PixelSnapSetPoint(list, "TOPLEFT", btn, "BOTTOMLEFT", 0, -1)
     local count = (type(options) == "table") and #options or 0
-    list:SetSize(width, count * 20 + 10)
+    PixelSnapSetSize(list, width, count * 20 + 10, 1, 1)
     list:SetFrameStrata("TOOLTIP")
     list:SetClampedToScreen(true)
     list:Hide()
@@ -281,7 +285,7 @@ function NS.CreateModernDropdown(parent, label, options, func, width)
             local opts = ResolveOptions()
             BuildList(list, btn, opts)
             list:ClearAllPoints()
-            list:SetPoint("TOPLEFT", btn, "BOTTOMLEFT", 0, -1)
+            PixelSnapSetPoint(list, "TOPLEFT", btn, "BOTTOMLEFT", 0, -1)
             list:Show()
         end
     end)
@@ -512,11 +516,11 @@ end
 -- Button variant: border accent on hover, text becomes white (used in copy panel)
 function NS.Widgets.CreateButtonWhiteHover(parent, label, desc, onClick)
     local btn = CreateFrame("Button", nil, parent, "BackdropTemplate")
-    btn:SetSize(180, 24)
+    PixelSnapSetSize(btn, 180, 24, 1, 1)
     NS.CreateBackdrop(btn, {0, 0, 0, 0.5}, {0.3, 0.3, 0.3, 1})
 
     local t = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    t:SetPoint("CENTER", btn, "CENTER", 0, 0)
+    PixelSnapSetPoint(t, "CENTER", btn, "CENTER", 0, 0)
     t:SetText(label or "")
     t:SetTextColor(unpack(NS.COLOR_TEXT_OFF))
     btn.Text = t
@@ -544,11 +548,11 @@ end
 -- Button style used in the Copy Profiles panel (matches the rest of the UI: white text on hover).
 function NS.Widgets.CreateActionButton(parent, label, onClick, width)
     local btn = CreateFrame("Button", nil, parent, "BackdropTemplate")
-    btn:SetSize(width or 180, 24)
+    PixelSnapSetSize(btn, width or 180, 24, 1, 1)
     NS.CreateBackdrop(btn, {0, 0, 0, 0.5}, {0.3, 0.3, 0.3, 1})
 
     local t = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    t:SetPoint("CENTER", btn, "CENTER", 0, 0)
+    PixelSnapSetPoint(t, "CENTER", btn, "CENTER", 0, 0)
     t:SetText(label or "")
     t:SetTextColor(unpack(NS.COLOR_TEXT_OFF))
     btn.Text = t
@@ -572,7 +576,7 @@ end
 function NS.Widgets.CreateCopyProfilesWidget(parent, opt)
     local frame = CreateFrame("Frame", nil, parent)
     -- Width is computed from dropdown width + arrow + gaps.
-    frame:SetSize(306, 260)
+    PixelSnapSetSize(frame, 306, 260, 1, 1)
 
     local unitTypeList = opt.unitTypeList or {}
     local sections = opt.sections or {}
@@ -609,28 +613,28 @@ function NS.Widgets.CreateCopyProfilesWidget(parent, opt)
     local dstX = ddW + gap + arrowW + gap
 
     local srcDD = NS.Widgets.CreateDropdown(frame, NS.L("Source"), srcKey, unitTypeList, context, ddW)
-    srcDD:SetPoint("TOPLEFT", 0, 0)
+    PixelSnapSetPoint(srcDD, "TOPLEFT", frame, "TOPLEFT", 0, 0)
 
     local arrow = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    arrow:SetPoint("TOPLEFT", ddW + gap, -22)
-    arrow:SetSize(arrowW, 18)
+    PixelSnapSetPoint(arrow, "TOPLEFT", frame, "TOPLEFT", ddW + gap, -22)
+    PixelSnapSetSize(arrow, arrowW, 18, 1, 1)
     arrow:SetJustifyH("CENTER")
     arrow:SetJustifyV("MIDDLE")
     arrow:SetTextColor(unpack(NS.COLOR_TEXT_OFF))
     arrow:SetText(">>")
 
     local dstDD = NS.Widgets.CreateDropdown(frame, NS.L("Destination"), dstKey, FilterDestOptions, context, ddW)
-    dstDD:SetPoint("TOPLEFT", dstX, 0)
+    PixelSnapSetPoint(dstDD, "TOPLEFT", frame, "TOPLEFT", dstX, 0)
 
     -- Sections title
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    title:SetPoint("TOPLEFT", 0, -52)
+    PixelSnapSetPoint(title, "TOPLEFT", frame, "TOPLEFT", 0, -52)
     title:SetTextColor(unpack(NS.COLOR_TEXT_OFF))
     title:SetText(NS.L("Sections"))
 
     local sectionBox = CreateFrame("Frame", nil, frame)
-    sectionBox:SetPoint("TOPLEFT", 0, -70)
-    sectionBox:SetSize(306, 160)
+    PixelSnapSetPoint(sectionBox, "TOPLEFT", frame, "TOPLEFT", 0, -70)
+    PixelSnapSetSize(sectionBox, 306, 160, 1, 1)
 
     local function SetAll(val)
         for _, s in ipairs(sections) do
@@ -641,9 +645,9 @@ function NS.Widgets.CreateCopyProfilesWidget(parent, opt)
 
     -- Buttons in one row: same width as the dropdowns.
     local btnAll = NS.Widgets.CreateActionButton(sectionBox, NS.L("Select all"), function() SetAll(true) end, ddW)
-    btnAll:SetPoint("TOPLEFT", 0, 0)
+    PixelSnapSetPoint(btnAll, "TOPLEFT", sectionBox, "TOPLEFT", 0, 0)
     local btnNone = NS.Widgets.CreateActionButton(sectionBox, NS.L("Clear all"), function() SetAll(false) end, ddW)
-    btnNone:SetPoint("TOPLEFT", dstX, 0)
+    PixelSnapSetPoint(btnNone, "TOPLEFT", sectionBox, "TOPLEFT", dstX, 0)
 
     -- Checkboxes in 2 columns
     local cbStartY = -30
@@ -656,7 +660,7 @@ function NS.Widgets.CreateCopyProfilesWidget(parent, opt)
         local x = (col == 1) and colX1 or colX2
         local y = cbStartY - (idxInCol-1) * rowH
         local cb = NS.Widgets.CreateCheckbox(sectionBox, s.text, s.key, nil, nil, "Global")
-        cb:SetPoint("TOPLEFT", x, y)
+        PixelSnapSetPoint(cb, "TOPLEFT", sectionBox, "TOPLEFT", x, y)
         cb:HookScript("OnClick", function()
             if NS.RefreshGUI then NS.RefreshGUI(true) end
         end)
@@ -677,7 +681,7 @@ function NS.Widgets.CreateCopyProfilesWidget(parent, opt)
             NS.DB.CopySections(src, dst, picked)
         end
     end, 180)
-    copyBtn:SetPoint("TOP", sectionBox, "BOTTOM", 0, -12)
+    PixelSnapSetPoint(copyBtn, "TOP", sectionBox, "BOTTOM", 0, -12)
 
     return frame
 end
@@ -690,9 +694,9 @@ function NS.Widgets.CreateSeparator(parent, orientation, size)
     local alpha = (orientation == "V") and 0.40 or 0.10
     tex:SetColorTexture(0.5, 0.5, 0.5, alpha)
     if orientation == "V" then
-        f:SetSize(1, size or 100)
+        PixelSnapSetSize(f, 1, size or 100, 1, 1)
     else
-        f:SetSize(size or 250, 1)
+        PixelSnapSetSize(f, size or 250, 1, 1, 1)
     end
     return f
 end

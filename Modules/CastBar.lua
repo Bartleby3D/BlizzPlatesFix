@@ -2,6 +2,9 @@ local _, NS = ...
 
 local STANDARD_TEXT_FONT = _G.STANDARD_TEXT_FONT
 local CastBarState = setmetatable({}, { __mode = "k" }) -- key = castBar
+local PixelSnapValue = NS.PixelSnapValue
+local PixelSnapSetSize = NS.PixelSnapSetSize
+local PixelSnapSetPoint = NS.PixelSnapSetPoint
 
 local function ApplyBarVisibility(cb, db)
     if not cb or not db then return end
@@ -234,8 +237,8 @@ local function EnsureWidgets(cb, st)
         -- Чёрная обводка на подуровне 0 (под иконкой)
         st.iconBorder = cb:CreateTexture(nil, "OVERLAY", nil, 0)
         st.iconBorder:SetColorTexture(1, 1, 1, 1)
-        st.iconBorder:SetPoint("TOPLEFT", st.icon, "TOPLEFT", -2, 2)
-        st.iconBorder:SetPoint("BOTTOMRIGHT", st.icon, "BOTTOMRIGHT", 2, -2)
+        PixelSnapSetPoint(st.iconBorder, "TOPLEFT", st.icon, "TOPLEFT", -2, 2, 1, 1)
+        PixelSnapSetPoint(st.iconBorder, "BOTTOMRIGHT", st.icon, "BOTTOMRIGHT", 2, -2, 1, 1)
     end
 end
 
@@ -245,6 +248,7 @@ local function ApplyIconBorderStyle(st, db)
     local show = (db.cbIconEnabled ~= false) and (db.cbIconBorderEnable ~= false)
     local t = tonumber(db.cbIconBorderThickness) or 0
     if t < 0 then t = 0 end
+    t = PixelSnapValue(st.icon, t, t > 0 and 1 or 0)
 
     if not show or t == 0 then
         st.iconBorder:Hide()
@@ -265,8 +269,8 @@ local function ApplyIconBorderStyle(st, db)
     st.iconBorder:SetVertexColor(r, g, b, a)
 
     st.iconBorder:ClearAllPoints()
-    st.iconBorder:SetPoint("TOPLEFT", st.icon, "TOPLEFT", -t, t)
-    st.iconBorder:SetPoint("BOTTOMRIGHT", st.icon, "BOTTOMRIGHT", t, -t)
+    PixelSnapSetPoint(st.iconBorder, "TOPLEFT", st.icon, "TOPLEFT", -t, t, t > 0 and 1 or 0, t > 0 and 1 or 0)
+    PixelSnapSetPoint(st.iconBorder, "BOTTOMRIGHT", st.icon, "BOTTOMRIGHT", t, -t, t > 0 and 1 or 0, t > 0 and 1 or 0)
     st.iconBorder:Show()
 end
 
@@ -275,8 +279,8 @@ local function LayoutIcon(cb, st, db)
 
     if db.cbIconEnabled then
         st.icon:ClearAllPoints()
-        st.icon:SetPoint("RIGHT", cb, "LEFT", (db.cbIconX or -10), (db.cbIconY or 0))
-        st.icon:SetSize(db.cbIconSize or 18, db.cbIconSize or 18)
+        PixelSnapSetPoint(st.icon, "RIGHT", cb, "LEFT", (db.cbIconX or -10), (db.cbIconY or 0), 0, 0)
+        PixelSnapSetSize(st.icon, db.cbIconSize or 18, db.cbIconSize or 18, 1, 1)
         st.icon:Show()
         ApplyIconBorderStyle(st, db)
     else
@@ -287,8 +291,8 @@ local function LayoutIcon(cb, st, db)
     if cb.Icon then
         cb.Icon:SetAlpha(0)
         cb.Icon:ClearAllPoints()
-        cb.Icon:SetPoint("RIGHT", cb, "LEFT", (db.cbIconX or -10), (db.cbIconY or 0))
-        cb.Icon:SetSize(db.cbIconSize or 18, db.cbIconSize or 18)
+        PixelSnapSetPoint(cb.Icon, "RIGHT", cb, "LEFT", (db.cbIconX or -10), (db.cbIconY or 0), 0, 0)
+        PixelSnapSetSize(cb.Icon, db.cbIconSize or 18, db.cbIconSize or 18, 1, 1)
     end
 end
 

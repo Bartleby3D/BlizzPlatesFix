@@ -98,7 +98,7 @@ local function EnsureDynamicTaskRegistered()
             st.lastShowEmpty ~= false,
             st.lastReverseFill == true,
             partialProgress,
-            max(1, (st.lastWidth or 16) - 2),
+            st.lastInnerWidth or max(1, ((st.lastLayoutWidth or st.lastWidth or 16) - 2)),
             powerType,
             st.lastRenderStyle or CR.STYLE_CUSTOM
         )
@@ -211,7 +211,7 @@ function CR.Update(frame, unit, db, gdb)
 
     local layoutChanged = (st.lastWidth ~= width or st.lastHeight ~= height or st.lastSpacing ~= spacing or st.lastCount ~= maxPower)
     if layoutChanged then
-        CR.UpdateSlotLayout(holder, st, maxPower, width, height, spacing)
+        CR.UpdateSlotLayout(holder, st, maxPower, width, height, spacing, renderStyle)
         st.lastWidth = width
         st.lastHeight = height
         st.lastSpacing = spacing
@@ -219,7 +219,7 @@ function CR.Update(frame, unit, db, gdb)
 
     local castShown = (anchorMode == 2) and frame.castBar and frame.castBar:IsShown() or false
     if st.lastOffX ~= offX or st.lastOffY ~= offY or st.lastAnchorMode ~= anchorMode or st.lastAnchorCastShown ~= castShown then
-        CR.ApplyAnchor(frame, holder, offX, offY, anchorMode)
+        CR.ApplyAnchor(frame, holder, offX, offY, anchorMode, renderStyle)
         st.lastOffX = offX
         st.lastOffY = offY
         st.lastAnchorMode = anchorMode
@@ -245,7 +245,7 @@ function CR.Update(frame, unit, db, gdb)
         UpdateRunes(frame, st, maxPower, reverseFill, restoringAlpha, renderStyle, powerType)
     else
         CR.ClearActiveRuneTarget(frame)
-        CR.UpdateGeneric(st, maxPower, current, restoringAlpha, showEmpty, reverseFill, partialProgress, max(1, width - 2), powerType, renderStyle)
+        CR.UpdateGeneric(st, maxPower, current, restoringAlpha, showEmpty, reverseFill, partialProgress, st.lastInnerWidth or max(1, ((st.lastLayoutWidth or width) - 2)), powerType, renderStyle)
 
         local needsDynamic = CR.NeedsDynamicPolling(powerType, current, maxPower, partialProgress)
 

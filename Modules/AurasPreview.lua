@@ -46,18 +46,19 @@ local function IsExpanded()
     return t < GROW_WINDOW
 end
 
-local function MakeEntry(spellID, duration, stacks, forcePandemic)
+local function MakeEntry(spellID, duration, stacks, forcePandemic, extra)
     local tex = GetSpellTex(spellID) or FALLBACK_ICON
     duration = tonumber(duration) or 0
     stacks = tonumber(stacks) or 0
+    extra = type(extra) == "table" and extra or nil
     local now = GetTime()
 
     local start = now
     if duration > 1 then
         if forcePandemic then
-            -- Ставим ауру сразу в последние 20% длительности,
-            -- чтобы Pandemic Glow был виден моментально.
-            start = now - (duration * 0.8)
+            -- Ставим ауру сразу в последние 25% длительности,
+            -- чтобы подсветка по таймеру была видна моментально.
+            start = now - (duration * 0.75)
         else
             start = now - math.random(0, math.floor(duration - 1))
         end
@@ -69,6 +70,8 @@ local function MakeEntry(spellID, duration, stacks, forcePandemic)
         start = start,
         stacks = stacks,
         forcePandemic = forcePandemic and true or false,
+        previewPurgeGlow = extra and extra.previewPurgeGlow or false,
+        previewDispelGlow = extra and extra.previewDispelGlow or false,
     }
 end
 
@@ -79,18 +82,18 @@ local function EnsureState()
     PreviewState.buffs = {
         MakeEntry(21562, 120, 3),        -- Power Word: Fortitude
         MakeEntry(6673, 120, 2),         -- Battle Shout
-        MakeEntry(104773, 12, 0, true),  -- Unending Resolve
-        MakeEntry(1022, 10, 4),          -- Blessing of Protection
-        MakeEntry(12472, 20, 0),         -- Icy Veins
+        MakeEntry(104773, 12, 0, true),                          -- Unending Resolve
+        MakeEntry(1022, 10, 4),                                  -- Blessing of Protection
+        MakeEntry(12472, 20, 0, false, { previewPurgeGlow = true }), -- Icy Veins (preview purge/steal)
     }
 
     -- DEBUFF
     PreviewState.debuffs = {
-        MakeEntry(57723, 12, 2),         -- Sated/Exhaustion (fallback если нет)
-        MakeEntry(25771, 18, 3),         -- Forbearance
-        MakeEntry(34914, 12, 0, true),   -- Vampiric Touch
-        MakeEntry(6788, 18, 5),          -- Weakened Soul
-        MakeEntry(188389, 8, 0),         -- Flame Shock (id может отличаться)
+        MakeEntry(57723, 12, 2),                                        -- Sated/Exhaustion (fallback если нет)
+        MakeEntry(25771, 18, 3),                                        -- Forbearance
+        MakeEntry(34914, 12, 0, true, { previewDispelGlow = true }),    -- Vampiric Touch (preview dispel)
+        MakeEntry(6788, 18, 5),                                         -- Weakened Soul
+        MakeEntry(188389, 8, 0),                                        -- Flame Shock (id может отличаться)
     }
 
     -- CC
@@ -116,7 +119,7 @@ local function RotateExpired(list)
             end
 
             if a.forcePandemic and dur > 1 then
-                a.start = now - (dur * 0.8)
+                a.start = now - (dur * 0.75)
             else
                 a.start = now
             end
@@ -180,7 +183,7 @@ function NS.AurasPreview.DisableAll()
 end
 
 -- Возвращает тестовые списки аур.
--- Формат элемента: { icon=texturePath, duration=number, remaining=number, stacks=number }
+-- Формат элемента: { icon=texturePath, duration=number, remaining=number, stacks=number, previewPurgeGlow=bool, previewDispelGlow=bool }
 function NS.AurasPreview.GetLists(unit)
     EnsureState()
     RotateExpired(PreviewState.buffs)

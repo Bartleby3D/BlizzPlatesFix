@@ -72,6 +72,75 @@ end
 NS.SafeBool = SafeBool
 NS.SafeValue = SafeValue
 
+local function PixelRoundNearest(value)
+    if value == nil then return 0 end
+    if value >= 0 then
+        return math.floor(value + 0.5)
+    end
+    return math.ceil(value - 0.5)
+end
+
+local function GetPixelToUIUnitFactor()
+    local _, physicalHeight = GetPhysicalScreenSize()
+    if not physicalHeight or physicalHeight <= 0 then
+        return 1
+    end
+    return 768.0 / physicalHeight
+end
+
+local function GetNearestPixelSize(uiUnitSize, layoutScale, minPixels)
+    uiUnitSize = tonumber(uiUnitSize) or 0
+    layoutScale = tonumber(layoutScale) or 1
+    if layoutScale == 0 then
+        return uiUnitSize
+    end
+    if uiUnitSize == 0 and (not minPixels or minPixels == 0) then
+        return 0
+    end
+
+    local uiUnitFactor = GetPixelToUIUnitFactor()
+    local numPixels = PixelRoundNearest((uiUnitSize * layoutScale) / uiUnitFactor)
+    if minPixels then
+        if uiUnitSize < 0 then
+            if numPixels > -minPixels then
+                numPixels = -minPixels
+            end
+        else
+            if numPixels < minPixels then
+                numPixels = minPixels
+            end
+        end
+    end
+
+    return numPixels * uiUnitFactor / layoutScale
+end
+
+function NS.PixelSnapValue(region, value, minPixels)
+    if not region or not region.GetEffectiveScale then
+        return tonumber(value) or 0
+    end
+    return GetNearestPixelSize(value, region:GetEffectiveScale(), minPixels)
+end
+
+function NS.PixelSnapSetSize(region, width, height, minWidthPixels, minHeightPixels)
+    if not region then return end
+    region:SetSize(
+        NS.PixelSnapValue(region, width, minWidthPixels),
+        NS.PixelSnapValue(region, height, minHeightPixels)
+    )
+end
+
+function NS.PixelSnapSetPoint(region, point, relativeTo, relativePoint, offsetX, offsetY, minOffsetXPixels, minOffsetYPixels)
+    if not region then return end
+    region:SetPoint(
+        point,
+        relativeTo,
+        relativePoint,
+        NS.PixelSnapValue(region, offsetX, minOffsetXPixels),
+        NS.PixelSnapValue(region, offsetY, minOffsetYPixels)
+    )
+end
+
 
 -- ГЛАВНАЯ НОВАЯ ФУНКЦИЯ: Определение типа конфига для юнита
 function NS.GetUnitConfig(unit)

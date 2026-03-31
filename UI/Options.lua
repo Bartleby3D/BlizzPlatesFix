@@ -343,7 +343,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Icon border"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", NS.L("Show border"), nil, "cbIconBorderEnable", nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Border"), nil, "cbIconBorderEnable", nil, nil, nil, nil, 1)
             Add("slider", NS.L("Thickness"), nil, "cbIconBorderThickness", 0, 8, 1, nil, 1, {offX=20})
             Add("color", NS.L("Border color"), nil, "cbIconBorderColor", nil, nil, nil, nil, 1, {offX=20})
 
@@ -415,16 +415,18 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Icon border"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", NS.L("Border"), nil, "buffsBorderEnable", nil, nil, nil, nil, 1)
-            Add("slider", NS.L("Border thickness"), nil, "buffsBorderThickness", 0, 8, 1, nil, 1, {offX=20, requires = { key = "buffsBorderEnable", value = true }})
-            Add("color", NS.L("Border color"), nil, "buffsBorderColor", nil, nil, nil, nil, 1, {offX=20, requires = { key = "buffsBorderEnable", value = true }})
+            Add("checkbox", NS.L("Border"), nil, "buffsBorderEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
+            Add("slider", NS.L("Border thickness"), nil, "buffsBorderThickness", 0, 8, 1, nil, 1, {offX=20})
+            Add("color", NS.L("Border color"), nil, "buffsBorderColor", nil, nil, nil, nil, 1, {offX=20})
 
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 10})
             Add("separator", nil, nil, nil, nil, nil, nil, nil, 1, {size=260, offY=8})
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", NS.L("Pandemic Glow"), nil, "buffsPandemic", nil, nil, nil, nil, 1)
+            if dbContext == NS.UNIT_TYPES.ENEMY_PLAYER or dbContext == NS.UNIT_TYPES.ENEMY_NPC then
+                Add("checkbox", NS.L("Highlight if dispellable/stealable"), nil, "buffsPurgeGlow", nil, nil, nil, nil, 1)
+            end
             Add("checkbox", NS.L("Non-target alpha"), nil, "buffsNonTargetAlphaEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
             Add("slider", NS.L("Alpha"), nil, "buffsNonTargetAlpha", 0, 1, 0.05, nil, 1, {offX=20, requires = { key = "buffsNonTargetAlphaEnable", value = true }})
             Add("checkbox", NS.L("Non-target scale"), nil, "buffsNonTargetScaleEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
@@ -444,7 +446,6 @@ function NS.Options.GetTable(mainIdx, subIdx)
             }
             if dbContext == NS.UNIT_TYPES.ENEMY_PLAYER or dbContext == NS.UNIT_TYPES.ENEMY_NPC then
                 Add("dropdown", NS.L("Buff filter"), nil, "buffsEnemyFilterMode", nil, nil, nil, buffFilterEnemy, 1)
-                Add("checkbox", NS.L("Highlight: dispellable/stealable buff"), nil, "buffsPurgeGlow", nil, nil, nil, nil, 1)
             end
 
             if dbContext == NS.UNIT_TYPES.FRIENDLY_PLAYER or dbContext == NS.UNIT_TYPES.FRIENDLY_NPC then
@@ -453,7 +454,10 @@ function NS.Options.GetTable(mainIdx, subIdx)
             -- Col 2: Превью + Тексты
             Add("header", NS.L("Timer"), nil, nil, nil, nil, nil, nil, 2)
             Add("checkbox", NS.L("Show timer"), nil, "buffsTimerEnable", nil, nil, nil, nil, 2)
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -5})
             Add("checkbox", NS.L("Timer edge"), nil, "buffsTimerEdge", nil, nil, nil, nil, 2, {offX=20})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -5})
+            Add("checkbox", NS.L("Red timer at < 25% remaining"), nil, "buffsPandemic", nil, nil, nil, nil, 2, {offX=20})
             Add("slider", NS.L("Size"), nil, "buffsTimeFontSize", 6, 24, 1, nil, 2, {offX=20})
             Add("slider", NS.L("Offset X"), nil, "buffsTimeX", -30, 30, 1, nil, 2, {offX=20})
             Add("slider", NS.L("Offset Y"), nil, "buffsTimeY", -30, 30, 1, nil, 2, {offX=20})
@@ -496,16 +500,18 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Icon border"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", NS.L("Border"), nil, "debuffsBorderEnable", nil, nil, nil, nil, 1)
-            Add("slider", NS.L("Border thickness"), nil, "debuffsBorderThickness", 0, 8, 1, nil, 1, {offX=20, requires = { key = "debuffsBorderEnable", value = true }})
-            Add("color", NS.L("Border color"), nil, "debuffsBorderColor", nil, nil, nil, nil, 1, {offX=20, requires = { key = "debuffsBorderEnable", value = true }})
+            Add("checkbox", NS.L("Border"), nil, "debuffsBorderEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
+            Add("slider", NS.L("Border thickness"), nil, "debuffsBorderThickness", 0, 8, 1, nil, 1, {offX=20})
+            Add("color", NS.L("Border color"), nil, "debuffsBorderColor", nil, nil, nil, nil, 1, {offX=20})
 
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 10})
             Add("separator", nil, nil, nil, nil, nil, nil, nil, 1, {size=260, offY=8})
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", NS.L("Pandemic Glow"), nil, "debuffsPandemic", nil, nil, nil, nil, 1)
+            if dbContext == NS.UNIT_TYPES.FRIENDLY_PLAYER or dbContext == NS.UNIT_TYPES.FRIENDLY_NPC then
+                Add("checkbox", NS.L("Highlight if dispellable by me"), nil, "debuffsDispelGlow", nil, nil, nil, nil, 1)
+            end
             Add("checkbox", NS.L("Non-target alpha"), nil, "debuffsNonTargetAlphaEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
             Add("slider", NS.L("Alpha"), nil, "debuffsNonTargetAlpha", 0, 1, 0.05, nil, 1, {offX=20, requires = { key = "debuffsNonTargetAlphaEnable", value = true }})
             Add("checkbox", NS.L("Non-target scale"), nil, "debuffsNonTargetScaleEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
@@ -528,13 +534,15 @@ function NS.Options.GetTable(mainIdx, subIdx)
             end
             if dbContext == NS.UNIT_TYPES.FRIENDLY_PLAYER or dbContext == NS.UNIT_TYPES.FRIENDLY_NPC then
                 Add("dropdown", NS.L("Debuff filter"), nil, "debuffsFriendlyFilterMode", nil, nil, nil, debuffFilterFriendly, 1)
-                Add("checkbox", NS.L("Highlight if dispellable by me"), nil, "debuffsDispelGlow", nil, nil, nil, nil, 1)
             end
 
             -- Col 2: Превью + Тексты
             Add("header", NS.L("Timer"), nil, nil, nil, nil, nil, nil, 2)
             Add("checkbox", NS.L("Show timer"), nil, "debuffsTimerEnable", nil, nil, nil, nil, 2)
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -5})
             Add("checkbox", NS.L("Timer edge"), nil, "debuffsTimerEdge", nil, nil, nil, nil, 2, {offX=20})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -5})
+            Add("checkbox", NS.L("Red timer at < 25% remaining"), nil, "debuffsPandemic", nil, nil, nil, nil, 2, {offX=20})
             Add("slider", NS.L("Size"), nil, "debuffsTimeFontSize", 6, 24, 1, nil, 2, {offX=20})
             Add("slider", NS.L("Offset X"), nil, "debuffsTimeX", -30, 30, 1, nil, 2, {offX=20})
             Add("slider", NS.L("Offset Y"), nil, "debuffsTimeY", -30, 30, 1, nil, 2, {offX=20})
@@ -577,16 +585,15 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Icon border"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", NS.L("Border"), nil, "ccBorderEnable", nil, nil, nil, nil, 1)
-            Add("slider", NS.L("Border thickness"), nil, "ccBorderThickness", 0, 8, 1, nil, 1, {offX=20, requires = { key = "ccBorderEnable", value = true }})
-            Add("color", NS.L("Border color"), nil, "ccBorderColor", nil, nil, nil, nil, 1, {offX=20, requires = { key = "ccBorderEnable", value = true }})
+            Add("checkbox", NS.L("Border"), nil, "ccBorderEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
+            Add("slider", NS.L("Border thickness"), nil, "ccBorderThickness", 0, 8, 1, nil, 1, {offX=20})
+            Add("color", NS.L("Border color"), nil, "ccBorderColor", nil, nil, nil, nil, 1, {offX=20})
 
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 10})
             Add("separator", nil, nil, nil, nil, nil, nil, nil, 1, {size=260, offY=8})
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
 
             Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", NS.L("Pandemic Glow"), nil, "ccPandemic", nil, nil, nil, nil, 1)
             Add("checkbox", NS.L("Non-target alpha"), nil, "ccNonTargetAlphaEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
             Add("slider", NS.L("Alpha"), nil, "ccNonTargetAlpha", 0, 1, 0.05, nil, 1, {offX=20, requires = { key = "ccNonTargetAlphaEnable", value = true }})
             Add("checkbox", NS.L("Non-target scale"), nil, "ccNonTargetScaleEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
@@ -598,7 +605,10 @@ function NS.Options.GetTable(mainIdx, subIdx)
             -- Col 2: Превью + Тексты
             Add("header", NS.L("Timer"), nil, nil, nil, nil, nil, nil, 2)
             Add("checkbox", NS.L("Show timer"), nil, "ccTimerEnable", nil, nil, nil, nil, 2)
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -5})
             Add("checkbox", NS.L("Timer edge"), nil, "ccTimerEdge", nil, nil, nil, nil, 2, {offX=20})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -5})
+            Add("checkbox", NS.L("Red timer at < 25% remaining"), nil, "ccPandemic", nil, nil, nil, nil, 2, {offX=20})
             Add("slider", NS.L("Size"), nil, "ccTimeFontSize", 6, 24, 1, nil, 2, {offX=20})
             Add("slider", NS.L("Offset X"), nil, "ccTimeX", -30, 30, 1, nil, 2, {offX=20})
             Add("slider", NS.L("Offset Y"), nil, "ccTimeY", -30, 30, 1, nil, 2, {offX=20})

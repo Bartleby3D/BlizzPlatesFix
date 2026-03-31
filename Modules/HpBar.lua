@@ -159,88 +159,22 @@ local function SetHealthBarVisualAlpha(frame, hb, a)
     end
 end
 
-local function ComputeBaseColor(unit, db)
-    if db.healthColorMode == 2 then
-        local enemyNpcDB = NS.Config and NS.Config.GetTable and NS.Config.GetTable(NS.UNIT_TYPES.ENEMY_NPC)
-        local friendlyNpcDB = NS.Config and NS.Config.GetTable and NS.Config.GetTable(NS.UNIT_TYPES.FRIENDLY_NPC)
-
-        local c
-        if enemyNpcDB and db == enemyNpcDB then
-            local reaction = UnitReaction(unit, "player")
-            if reaction == 4 then
-                c = db.healthColorNeutral or db.healthColor
-            else
-                c = db.healthColorHostile or db.healthColor
-            end
-        elseif friendlyNpcDB and db == friendlyNpcDB then
-            local reaction = UnitReaction(unit, "player")
-            if reaction == 4 then
-                c = db.healthColorNeutral or db.healthColor
-            else
-                c = db.healthColorFriendly or db.healthColor
-            end
-        else
-            c = db.healthColor
-        end
-
-        if not c then return 1, 1, 1 end
-        return c.r, c.g, c.b
+local function ComputeDesiredColor(unit, db, gdb)
+    if not (NS.UnitColor and NS.UnitColor.GetColor) then
+        return 1, 1, 1
     end
 
-    if db.healthColorMode == 3 then
-        return UnitSelectionColor(unit)
-    end
-
-    local isPlayer = UnitIsPlayer(unit) or (UnitTreatAsPlayerForDisplay and UnitTreatAsPlayerForDisplay(unit))
-    if isPlayer then
-        local _, class = UnitClass(unit)
-        if class then
-            local c = C_ClassColor.GetClassColor(class)
-            if c then return c.r, c.g, c.b end
-        end
-        return 0.5, 0.5, 0.5
-    end
-
-    return UnitSelectionColor(unit)
-end
-
-local function GetThreatOverrideColor(unit, gdb)
-    if not unit or not gdb then return nil end
-    if UnitIsFriend("player", unit) then return nil end
-    if UnitIsPlayer(unit) or (UnitTreatAsPlayerForDisplay and UnitTreatAsPlayerForDisplay(unit)) then return nil end
-    if not UnitCanAttack("player", unit) then return nil end
-
-    local state = NS.Threat and NS.Threat.GetPlayerState and NS.Threat.GetPlayerState(unit)
-    if state == nil or state == NS.Threat.STATE_NONE then
-        return nil
-    end
-
-    if gdb.tankModeEnable then
-        local c = (state == NS.Threat.STATE_ONME) and gdb.tankModePlayerAggroColor or gdb.tankModeOffTankColor
-        if c then
-            return c.r, c.g, c.b
-        end
-        return nil
-    end
-
-    return 1, 0.1, 0.1
-end
-
-local function ComputeDesiredColor(frame, unit, db, gdb)
-    local st = GetState(frame)
-    if st.lastUnit ~= unit then
-        st.lastUnit = unit
-        st.lastColorR = nil
-        st.lastColorG = nil
-        st.lastColorB = nil
-    end
-
-    local r, g, b = GetThreatOverrideColor(unit, gdb)
-    if r ~= nil then
-        return r, g, b
-    end
-
-    return ComputeBaseColor(unit, db)
+    return NS.UnitColor.GetColor(
+        unit,
+        db,
+        gdb,
+        "healthColorMode",
+        "healthColor",
+        "healthColorHostile",
+        "healthColorFriendly",
+        "healthColorNeutral",
+        0.5, 0.5, 0.5
+    )
 end
 
 local function ApplyHealthColor(frame, unit, db, gdb)
@@ -253,7 +187,14 @@ local function ApplyHealthColor(frame, unit, db, gdb)
     if not db then return end
 
     local st = GetState(frame)
-    local r, g, b = ComputeDesiredColor(frame, unit, db, gdb)
+    if st.lastUnit ~= unit then
+        st.lastUnit = unit
+        st.lastColorR = nil
+        st.lastColorG = nil
+        st.lastColorB = nil
+    end
+
+    local r, g, b = ComputeDesiredColor(unit, db, gdb)
     if not r then return end
 
     local cr, cg, cb = hb:GetStatusBarColor()

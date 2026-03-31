@@ -2,6 +2,10 @@ local _, NS = ...
 
 NS.MenuState = NS.MenuState or {}
 
+local PixelSnapValue = NS.PixelSnapValue
+local PixelSnapSetSize = NS.PixelSnapSetSize
+local PixelSnapSetPoint = NS.PixelSnapSetPoint
+
 local playerUnitSubTabKeys = {
     -- Полоса здоровья
     [1] = "hpBarEnable",
@@ -103,13 +107,13 @@ local function DrawOptions(container, mainIdx, subIdx)
             if opt.type == "header" then
                 if currentY ~= startY then currentY = currentY - 10 end
                 widget = NS.Widgets.CreateHeader(container, opt.text)
-                widget:SetPoint("TOPLEFT", finalX - 5, currentY)
+                PixelSnapSetPoint(widget, "TOPLEFT", container, "TOPLEFT", finalX - 5, currentY)
                 currentY = currentY - 40
 
             elseif opt.type == "separator" then
                 currentY = currentY - 10 + (opt.offY or 0)
                 widget = NS.Widgets.CreateSeparator(container, "H", opt.width or 280)
-                widget:SetPoint("TOPLEFT", finalX - 10, currentY)
+                PixelSnapSetPoint(widget, "TOPLEFT", container, "TOPLEFT", finalX - 10, currentY)
 
             elseif opt.type == "vline" then
                 widget = NS.Widgets.CreateSeparator(container, "V", opt.height or 450)
@@ -118,12 +122,12 @@ local function DrawOptions(container, mainIdx, subIdx)
                 local vx = 325 + (opt.offX or 0)
                 local vy = startY + (opt.offY or 0)
                 widget._vlineTopY = vy
-                widget:SetPoint("TOPLEFT", vx, vy)
+                PixelSnapSetPoint(widget, "TOPLEFT", container, "TOPLEFT", vx, vy)
 
             elseif opt.type == "checkbox" then
                 -- ПЕРЕДАЕМ opt.context!
                 widget = NS.Widgets.CreateCheckbox(container, opt.label, opt.db, opt.desc, opt.val, opt.context, opt.onChange)
-                widget:SetPoint("TOPLEFT", finalX, currentY)
+                PixelSnapSetPoint(widget, "TOPLEFT", container, "TOPLEFT", finalX, currentY)
                 local extra = opt.desc and 15 or 0
                 currentY = currentY - 40 - extra
 
@@ -140,30 +144,30 @@ local function DrawOptions(container, mainIdx, subIdx)
             elseif opt.type == "slider" then
                 -- ПЕРЕДАЕМ opt.context!
                 widget = NS.Widgets.CreateSlider(container, opt.label, opt.db, opt.min, opt.max, opt.step, opt.desc, opt.context, opt.onChange)
-                widget:SetPoint("TOPLEFT", finalX, currentY)
+                PixelSnapSetPoint(widget, "TOPLEFT", container, "TOPLEFT", finalX, currentY)
                 local extra = opt.desc and 15 or 0
                 currentY = currentY - 50 - extra
 
             elseif opt.type == "color" then
                 -- ПЕРЕДАЕМ opt.context!
                 widget = NS.Widgets.CreateColorPicker(container, opt.label, opt.db, opt.context)
-                widget:SetPoint("TOPLEFT", finalX, currentY)
+                PixelSnapSetPoint(widget, "TOPLEFT", container, "TOPLEFT", finalX, currentY)
                 currentY = currentY - 35
 
             elseif opt.type == "dropdown" then
                 -- ПЕРЕДАЕМ opt.context!
                 widget = NS.Widgets.CreateDropdown(container, opt.label, opt.db, opt.options, opt.context, opt.width, opt.onChange, opt.getCurrent)
-                widget:SetPoint("TOPLEFT", finalX, currentY)
+                PixelSnapSetPoint(widget, "TOPLEFT", container, "TOPLEFT", finalX, currentY)
                 currentY = currentY - 60
 
             elseif opt.type == "button" then
                 widget = NS.Widgets.CreateButton(container, opt.label or opt.text, opt.desc, opt.onClick)
-                widget:SetPoint("TOPLEFT", finalX, currentY)
+                PixelSnapSetPoint(widget, "TOPLEFT", container, "TOPLEFT", finalX, currentY)
                 currentY = currentY - 35
 
             elseif opt.type == "copyprofiles" then
                 widget = NS.Widgets.CreateCopyProfilesWidget(container, opt)
-                widget:SetPoint("TOPLEFT", finalX, currentY)
+                PixelSnapSetPoint(widget, "TOPLEFT", container, "TOPLEFT", finalX, currentY)
                 currentY = currentY - (widget:GetHeight() or 200) - 10
 
             elseif opt.type == "spacer" then
@@ -251,7 +255,7 @@ local function DrawOptions(container, mainIdx, subIdx)
     local contentHeight = contentBottom + 15
     if contentHeight < 1 then contentHeight = 1 end
 
-    container:SetHeight(contentHeight)
+    container:SetHeight(PixelSnapValue(container, contentHeight, 1))
 
     local viewH = ScrollFrame and ScrollFrame:GetHeight() or 1
     local needScroll = (contentHeight > viewH + 1)
@@ -265,7 +269,7 @@ local function DrawOptions(container, mainIdx, subIdx)
     if vlineH < 1 then vlineH = 1 end
 
     for _, v in ipairs(vLines) do
-        v:SetHeight(vlineH)
+        v:SetHeight(PixelSnapValue(v, vlineH, 1))
     end
 
     if needScroll then
@@ -286,8 +290,8 @@ function NS.InitializeGUI()
     if MainFrame then return end
 
     MainFrame = CreateFrame("Frame", "BPF_MainLayout", UIParent, "BackdropTemplate")
-    MainFrame:SetSize(900, 650)
-    MainFrame:SetPoint("CENTER")
+    PixelSnapSetSize(MainFrame, 900, 650, 1, 1)
+    PixelSnapSetPoint(MainFrame, "CENTER", UIParent, "CENTER", 0, 0)
     MainFrame:SetMovable(true)
     MainFrame:EnableMouse(true)
     MainFrame:RegisterForDrag("LeftButton")
@@ -314,7 +318,7 @@ function NS.InitializeGUI()
     end
 
     local Title = MainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    Title:SetPoint("BOTTOMLEFT", MainFrame, "TOPLEFT", 10, 8)
+    PixelSnapSetPoint(Title, "BOTTOMLEFT", MainFrame, "TOPLEFT", 10, 8)
     Title:SetText("|cff00aaffBlizzPlates|r Fix")
     local font, size, flags = Title:GetFont()
     if font and size then
@@ -322,39 +326,39 @@ function NS.InitializeGUI()
     end
 
     local TopPanel = CreateFrame("Frame", nil, MainFrame)
-    TopPanel:SetPoint("TOPLEFT", 10, -10)
-    TopPanel:SetPoint("TOPRIGHT", -10, -10)
-    TopPanel:SetHeight(35)
+    PixelSnapSetPoint(TopPanel, "TOPLEFT", MainFrame, "TOPLEFT", 10, -10)
+    PixelSnapSetPoint(TopPanel, "TOPRIGHT", MainFrame, "TOPRIGHT", -10, -10)
+    TopPanel:SetHeight(PixelSnapValue(TopPanel, 35, 1))
 
     local LeftPanel = CreateFrame("Frame", nil, MainFrame, "BackdropTemplate")
-    LeftPanel:SetPoint("TOPLEFT", 10, -60)
-    LeftPanel:SetPoint("BOTTOMLEFT", 10, 10)
-    LeftPanel:SetWidth(170)
+    PixelSnapSetPoint(LeftPanel, "TOPLEFT", MainFrame, "TOPLEFT", 10, -60)
+    PixelSnapSetPoint(LeftPanel, "BOTTOMLEFT", MainFrame, "BOTTOMLEFT", 10, 10)
+    LeftPanel:SetWidth(PixelSnapValue(LeftPanel, 170, 1))
     NS.CreateBackdrop(LeftPanel, {0, 0, 0, 0.2}, NS.COLOR_BORDER)
 
     local Content = CreateFrame("Frame", nil, MainFrame, "BackdropTemplate")
-    Content:SetPoint("TOPLEFT", LeftPanel, "TOPRIGHT", 10, 0)
-    Content:SetPoint("BOTTOMRIGHT", -10, 10)
+    PixelSnapSetPoint(Content, "TOPLEFT", LeftPanel, "TOPRIGHT", 10, 0)
+    PixelSnapSetPoint(Content, "BOTTOMRIGHT", MainFrame, "BOTTOMRIGHT", -10, 10)
     NS.CreateBackdrop(Content, NS.COLOR_BG_PANEL, NS.COLOR_BORDER)
     Content:SetScript("OnMouseDown", function() NS.CloseAllDropdowns() end)
 
     local Clip = CreateFrame("Frame", nil, Content)
-    Clip:SetPoint("TOPLEFT", 0, -2)
-    Clip:SetPoint("BOTTOMRIGHT", -18, 2)
+    PixelSnapSetPoint(Clip, "TOPLEFT", Content, "TOPLEFT", 0, -2)
+    PixelSnapSetPoint(Clip, "BOTTOMRIGHT", Content, "BOTTOMRIGHT", -18, 2)
     if Clip.SetClipsChildren then Clip:SetClipsChildren(true) end
 
     ScrollFrame = CreateFrame("ScrollFrame", nil, Clip)
     ScrollFrame:SetAllPoints()
     ScrollFrame:EnableMouseWheel(true)
     ContentInner = CreateFrame("Frame", nil, ScrollFrame)
-    ContentInner:SetPoint("TOPLEFT", 0, 0)
-    ContentInner:SetWidth(680)
-    ContentInner:SetHeight(1)
+    PixelSnapSetPoint(ContentInner, "TOPLEFT", ScrollFrame, "TOPLEFT", 0, 0)
+    ContentInner:SetWidth(PixelSnapValue(ContentInner, 680, 1))
+    ContentInner:SetHeight(PixelSnapValue(ContentInner, 1, 1))
     ScrollFrame:SetScrollChild(ContentInner)
 
     -- Warning overlay (профиль типа существ выключен)
     ContentInner.BPF_WarningText = ContentInner:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    ContentInner.BPF_WarningText:SetPoint("CENTER", ContentInner, "CENTER", 0, 0)
+    PixelSnapSetPoint(ContentInner.BPF_WarningText, "CENTER", ContentInner, "CENTER", 0, 0)
     ContentInner.BPF_WarningText:SetTextColor(1, 0.1, 0.1, 1)
     ContentInner.BPF_WarningText:SetText("")
     ContentInner.BPF_WarningText:Hide()
@@ -362,10 +366,10 @@ function NS.InitializeGUI()
 
     -- ScrollBar logic
     ScrollBar = CreateFrame("Slider", nil, Content, "BackdropTemplate")
-    ScrollBar:SetPoint("TOPRIGHT", Content, "TOPRIGHT", -5, -7)
-    ScrollBar:SetPoint("BOTTOMRIGHT", Content, "BOTTOMRIGHT", -5, 7)
+    PixelSnapSetPoint(ScrollBar, "TOPRIGHT", Content, "TOPRIGHT", -5, -7)
+    PixelSnapSetPoint(ScrollBar, "BOTTOMRIGHT", Content, "BOTTOMRIGHT", -5, 7)
     local TRACK_W, THUMB_W, THUMB_H = 4, 4, 44
-    ScrollBar:SetWidth(TRACK_W)
+    ScrollBar:SetWidth(PixelSnapValue(ScrollBar, TRACK_W, 1))
     ScrollBar:SetOrientation("VERTICAL")
     ScrollBar:SetMinMaxValues(0, 0)
     ScrollBar:SetValue(0)
@@ -375,18 +379,18 @@ function NS.InitializeGUI()
     ScrollBar:SetBackdropColor(0, 0, 0, 0.35)
     local thumb = ScrollBar:CreateTexture(nil, "ARTWORK")
     thumb:SetTexture("Interface\\Buttons\\WHITE8X8")
-    thumb:SetSize(THUMB_W, THUMB_H)
+    PixelSnapSetSize(thumb, THUMB_W, THUMB_H, 1, 1)
     thumb:SetVertexColor(unpack(NS.COLOR_ACCENT))
     ScrollBar:SetThumbTexture(thumb)
     local thumbGlow = ScrollBar:CreateTexture(nil, "OVERLAY")
     thumbGlow:SetTexture("Interface\\Buttons\\WHITE8X8")
-    thumbGlow:SetPoint("CENTER", thumb, "CENTER", 0, 0)
-    thumbGlow:SetSize(THUMB_W + 2, THUMB_H + 2)
+    PixelSnapSetPoint(thumbGlow, "CENTER", thumb, "CENTER", 0, 0)
+    PixelSnapSetSize(thumbGlow, THUMB_W + 2, THUMB_H + 2, 1, 1)
     thumbGlow:SetVertexColor(1, 1, 1, 0.22)
     thumbGlow:Hide()
     local thumbHit = CreateFrame("Frame", nil, ScrollBar)
-    thumbHit:SetPoint("CENTER", thumb, "CENTER", 0, 0)
-    thumbHit:SetSize(THUMB_W + 10, THUMB_H + 10)
+    PixelSnapSetPoint(thumbHit, "CENTER", thumb, "CENTER", 0, 0)
+    PixelSnapSetSize(thumbHit, THUMB_W + 10, THUMB_H + 10, 1, 1)
     ScrollBar:SetScript("OnUpdate", function(self)
         if not self:IsShown() then thumbGlow:Hide(); return end
         if MouseIsOver(thumbHit) then thumbGlow:Show() else thumbGlow:Hide() end
@@ -420,7 +424,7 @@ function NS.InitializeGUI()
         end
         if CurrentMainTab == 6 then
             LeftPanel:Hide()
-            Content:SetPoint("TOPLEFT", MainFrame, "TOPLEFT", 10, -60)
+            PixelSnapSetPoint(Content, "TOPLEFT", MainFrame, "TOPLEFT", 10, -60)
 
             if ContentInner and ContentInner.BPF_WarningText then
                 ContentInner.BPF_WarningText:Hide()
@@ -445,7 +449,7 @@ function NS.InitializeGUI()
             end
         else
             LeftPanel:Show()
-            Content:SetPoint("TOPLEFT", LeftPanel, "TOPRIGHT", 10, 0)
+            PixelSnapSetPoint(Content, "TOPLEFT", LeftPanel, "TOPRIGHT", 10, 0)
             local currentSubList = (CurrentMainTab == 1) and GeneralSubTabs or NS.SubTabs
 
             -- Определяем контекст для галочек слева (для проверки enabled)
@@ -553,8 +557,8 @@ function NS.InitializeGUI()
     local mainBtnW = (totalWidth - (spacing * (#MainTabs - 1))) / #MainTabs
     for i, name in ipairs(MainTabs) do
         local btn = CreateFrame("Button", nil, TopPanel, "BackdropTemplate")
-        btn:SetSize(mainBtnW, 30)
-        btn:SetPoint("LEFT", (i-1) * (mainBtnW + spacing), 0)
+        PixelSnapSetSize(btn, mainBtnW, 30, 1, 1)
+        PixelSnapSetPoint(btn, "LEFT", TopPanel, "LEFT", (i-1) * (mainBtnW + spacing), 0)
         NS.CreateBackdrop(btn, {0.02, 0.02, 0.02, 1}, {0.15, 0.15, 0.15, 1})
         btn.Text = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         btn.Text:SetFont(btn.Text:GetFont(), 11)
@@ -574,8 +578,8 @@ function NS.InitializeGUI()
 -- Left Buttons
     for i = 1, 10 do
         local btn = CreateFrame("Button", nil, LeftPanel, "BackdropTemplate")
-        btn:SetSize(160, 32)
-        btn:SetPoint("TOP", 0, -10 - (i-1) * 35)
+        PixelSnapSetSize(btn, 160, 32, 1, 1)
+        PixelSnapSetPoint(btn, "TOP", LeftPanel, "TOP", 0, -10 - (i-1) * 35)
         NS.CreateBackdrop(btn, {0, 0, 0, 0.3}, {0.2, 0.2, 0.2, 1})
 
         btn.Text = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -583,15 +587,15 @@ function NS.InitializeGUI()
 
         -- ГАЛОЧКА (CHECKBOX)
         btn.Toggle = CreateFrame("CheckButton", nil, btn, "BackdropTemplate")
-        btn.Toggle:SetSize(16, 16)
-        btn.Toggle:SetPoint("RIGHT", btn, "RIGHT", -10, 0)
+        PixelSnapSetSize(btn.Toggle, 16, 16, 1, 1)
+        PixelSnapSetPoint(btn.Toggle, "RIGHT", btn, "RIGHT", -10, 0)
         NS.CreateBackdrop(btn.Toggle, {0,0,0,0.5}, {0.3,0.3,0.3,1})
         
         local check = btn.Toggle:CreateTexture(nil, "OVERLAY")
         check:SetTexture("Interface\\Buttons\\WHITE8X8")
         check:SetVertexColor(unpack(NS.COLOR_ACCENT))
-        check:SetPoint("TOPLEFT", 3, -3)
-        check:SetPoint("BOTTOMRIGHT", -3, 3)
+        PixelSnapSetPoint(check, "TOPLEFT", btn.Toggle, "TOPLEFT", 3, -3)
+        PixelSnapSetPoint(check, "BOTTOMRIGHT", btn.Toggle, "BOTTOMRIGHT", -3, 3)
         btn.Toggle:SetCheckedTexture(check)
 
         -- !!! ИЗМЕНЕНИЕ 1: ВКЛЮЧАЕМ МЫШЬ !!!
@@ -660,8 +664,8 @@ if NS.RequestUpdateAll then
 
     -- Close
     local close = CreateFrame("Button", nil, MainFrame, "BackdropTemplate")
-    close:SetSize(26, 26)
-    close:SetPoint("TOPRIGHT", MainFrame, "TOPRIGHT", 0, 26)
+    PixelSnapSetSize(close, 26, 26, 1, 1)
+    PixelSnapSetPoint(close, "TOPRIGHT", MainFrame, "TOPRIGHT", 0, 26)
     NS.CreateBackdrop(close, {0.02, 0.02, 0.02, 1}, {0.15, 0.15, 0.15, 1})
     close.t = close:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     -- FontString baseline in WoW fonts is slightly off-center; a small Y offset looks visually centered.
