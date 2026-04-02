@@ -10,7 +10,6 @@ local _, NS = ...
 --
 -- Notes:
 --   * This layer is intentionally UI-agnostic.
---   * It can optionally notify a per-frame callback when the ordered lists are rebuilt.
 
 NS.AurasData = NS.AurasData or {}
 
@@ -29,7 +28,6 @@ local function GetState(frame)
             ccIDs = nil,
             dirty = true,
             hasFull = false,
-            callback = nil, -- function(frame, unit, st)
         }
         State[frame] = st
     end
@@ -62,12 +60,6 @@ function NS.AurasData.Reset(frame)
     if not frame then return end
     local st = GetState(frame)
     ResetState(st)
-end
-
-function NS.AurasData.SetCallback(frame, cb)
-    if not frame then return end
-    local st = GetState(frame)
-    st.callback = cb
 end
 
 -- Returns: changed, needFull
@@ -228,11 +220,6 @@ function NS.AurasData.RebuildOrder(frame, unit)
     st.ccIDs = C_UnitAuras.GetUnitAuraInstanceIDs(unit, "HARMFUL|CROWD_CONTROL", nil, sortRule)
 
     st.dirty = false
-
-    if st.callback then
-        -- pcall to prevent breaking the whole addon on callback errors
-        pcall(st.callback, frame, unit, st)
-    end
 end
 
 function NS.AurasData.GetIDs(frame, kind)

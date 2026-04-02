@@ -37,15 +37,6 @@ local function HideAuraPools(frame)
     for _, icon in ipairs(st.cc) do HideAuraIcon(icon) end
 end
 
--- ============================================================================
--- 1.25. SECRET-SAFE HELPERS (12.0+)
--- ============================================================================
--- Some aura fields can be "secret" (including booleans). Any boolean-test
--- (if/and/or/not) on a secret value can error in tainted execution.
--- Use canaccessvalue() to safely read them.
-local SafeBool = NS.SafeBool
-local SafeValue = NS.SafeValue
-
 local PixelSnapValue = NS.PixelSnapValue
 local PixelSnapSetSize = NS.PixelSnapSetSize
 local PixelSnapSetPoint = NS.PixelSnapSetPoint
@@ -117,7 +108,32 @@ end
 local PANDEMIC_TASK_NAME = "auras_pandemic_timer_color"
 local PANDEMIC_TIMER_INTERVAL = 0.10
 local HIGHLIGHT_GOLD_R, HIGHLIGHT_GOLD_G, HIGHLIGHT_GOLD_B, HIGHLIGHT_GOLD_A = 1.00, 0.95, 0.20, 1.00
+local HIGHLIGHT_RED_R, HIGHLIGHT_RED_G, HIGHLIGHT_RED_B, HIGHLIGHT_RED_A = 1.00, 0.18, 0.18, 1.00
 local PANDEMIC_RED_R, PANDEMIC_RED_G, PANDEMIC_RED_B, PANDEMIC_RED_A = 1.00, 0.18, 0.18, 1.00
+
+local EnemyBuffDispelColorMap = {
+    ["Magic"] = CreateColor(HIGHLIGHT_GOLD_R, HIGHLIGHT_GOLD_G, HIGHLIGHT_GOLD_B, HIGHLIGHT_GOLD_A),
+    ["Curse"] = CreateColor(HIGHLIGHT_GOLD_R, HIGHLIGHT_GOLD_G, HIGHLIGHT_GOLD_B, HIGHLIGHT_GOLD_A),
+    ["Disease"] = CreateColor(HIGHLIGHT_GOLD_R, HIGHLIGHT_GOLD_G, HIGHLIGHT_GOLD_B, HIGHLIGHT_GOLD_A),
+    ["Poison"] = CreateColor(HIGHLIGHT_GOLD_R, HIGHLIGHT_GOLD_G, HIGHLIGHT_GOLD_B, HIGHLIGHT_GOLD_A),
+    [""] = CreateColor(HIGHLIGHT_RED_R, HIGHLIGHT_RED_G, HIGHLIGHT_RED_B, HIGHLIGHT_RED_A),
+    ["Bleed"] = CreateColor(HIGHLIGHT_GOLD_R, HIGHLIGHT_GOLD_G, HIGHLIGHT_GOLD_B, HIGHLIGHT_GOLD_A),
+}
+
+local EnemyBuffDispelCurve
+if C_CurveUtil then
+    EnemyBuffDispelCurve = C_CurveUtil.CreateColorCurve()
+    EnemyBuffDispelCurve:SetType(Enum.LuaCurveType.Step)
+    EnemyBuffDispelCurve:AddPoint(0, CreateColor(0, 0, 0, 0))
+    EnemyBuffDispelCurve:AddPoint(1, EnemyBuffDispelColorMap["Magic"])
+    EnemyBuffDispelCurve:AddPoint(2, EnemyBuffDispelColorMap["Curse"])
+    EnemyBuffDispelCurve:AddPoint(3, EnemyBuffDispelColorMap["Disease"])
+    EnemyBuffDispelCurve:AddPoint(4, EnemyBuffDispelColorMap["Poison"])
+    EnemyBuffDispelCurve:AddPoint(5, CreateColor(0, 0, 0, 0))
+    EnemyBuffDispelCurve:AddPoint(9, EnemyBuffDispelColorMap[""])
+    EnemyBuffDispelCurve:AddPoint(10, CreateColor(0, 0, 0, 0))
+    EnemyBuffDispelCurve:AddPoint(11, EnemyBuffDispelColorMap["Bleed"])
+end
 local PandemicIcons = setmetatable({}, { __mode = "k" })
 local PandemicIconsCount = 0
 local PandemicTaskRegistered = false
@@ -612,37 +628,181 @@ end
 -- ============================================================================
 -- 3. LOGIC (Единый маршрутизатор для всех 3-х пулов)
 -- ============================================================================
+
+local function AuraPassesFilter(unit, auraInstanceID, filter)
+    if not filter or filter == "" then
+        return true
+    end
+    if not (unit and auraInstanceID and C_UnitAuras and C_UnitAuras.IsAuraFilteredOutByInstanceID) then
+        return true
+    end
+    return not C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, auraInstanceID, filter)
+end
+
+local function BuildEnemyImportantSet(frame, unit, auraType)
+    if auraType == "BUFF" then
+        return BuildBlizzardNameplateAuraSet(frame, "BUFF")
+            or BuildNameplateOnlyAuraSet(unit, "HELPFUL|INCLUDE_NAME_PLATE_ONLY")
+    elseif auraType == "DEBUFF" then
+        return BuildBlizzardNameplateAuraSet(frame, "DEBUFF")
+            or BuildNameplateOnlyAuraSet(unit, "HARMFUL|INCLUDE_NAME_PLATE_ONLY")
+    end
+    return nil
+end
+
+local function IsEnemyImportant(auraInstanceID, importantSet)
+    return importantSet and auraInstanceID and importantSet[auraInstanceID] or false
+end
+
+local function EvaluateFriendlyBuffMode(unit, aura, mode)
+    local auraInstanceID = aura and aura.auraInstanceID
+    if mode == "MINE" then
+        return AuraPassesFilter(unit, auraInstanceID, "HELPFUL|PLAYER")
+    elseif mode == "MINE_IMPORTANT" then
+        return AuraPassesFilter(unit, auraInstanceID, "HELPFUL|PLAYER")
+            and AuraPassesFilter(unit, auraInstanceID, "HELPFUL|RAID")
+    elseif mode == "IMPORTANT" then
+        return AuraPassesFilter(unit, auraInstanceID, "HELPFUL|RAID")
+    elseif mode == "RAID_IN_COMBAT" then
+        return AuraPassesFilter(unit, auraInstanceID, "HELPFUL|RAID_IN_COMBAT")
+    elseif mode == "BIG_DEFENSIVE" then
+        return AuraPassesFilter(unit, auraInstanceID, "HELPFUL|BIG_DEFENSIVE")
+    elseif mode == "EXTERNAL_DEFENSIVE" then
+        return AuraPassesFilter(unit, auraInstanceID, "HELPFUL|EXTERNAL_DEFENSIVE")
+    elseif mode == "BIG_OR_EXTERNAL_DEFENSIVE" then
+        return AuraPassesFilter(unit, auraInstanceID, "HELPFUL|BIG_DEFENSIVE")
+            or AuraPassesFilter(unit, auraInstanceID, "HELPFUL|EXTERNAL_DEFENSIVE")
+    end
+    return true
+end
+
+local function EvaluateFriendlyDebuffMode(unit, aura, mode)
+    local auraInstanceID = aura and aura.auraInstanceID
+    if mode == "DISPEL" then
+        return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE")
+    elseif mode == "IMPORTANT" then
+        return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID")
+    elseif mode == "RAID_IN_COMBAT" then
+        return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID_IN_COMBAT")
+    elseif mode == "IMPORTANT_AND_DISPEL" then
+        return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID")
+            and AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE")
+    elseif mode == "IMPORTANT_OR_DISPEL" then
+        return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID")
+            or AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE")
+    end
+    return true
+end
+
+local function IsEnemyBuffDispellableLikePlatynator(aura)
+    if not aura then return false end
+    return aura.dispelName ~= nil
+end
+
+local function GetEnemyBuffPurgeGlowColor(unit, aura)
+    if not aura or aura.dispelName == nil then
+        return nil
+    end
+
+    if C_UnitAuras and C_UnitAuras.GetAuraDispelTypeColor and EnemyBuffDispelCurve and aura.auraInstanceID then
+        local color = C_UnitAuras.GetAuraDispelTypeColor(unit, aura.auraInstanceID, EnemyBuffDispelCurve)
+        if color then
+            return color:GetRGBA()
+        end
+    end
+
+    local fallback = EnemyBuffDispelColorMap[aura.dispelName]
+    if fallback then
+        return fallback.r, fallback.g, fallback.b, fallback.a or 1
+    end
+
+    return HIGHLIGHT_GOLD_R, HIGHLIGHT_GOLD_G, HIGHLIGHT_GOLD_B, HIGHLIGHT_GOLD_A
+end
+
+local function GetAuraHighlightColor(unit, auraType, isFriend, db, aura, isPreview)
+    if auraType == "DEBUFF" and isFriend and db.debuffsDispelGlow then
+        local dispelGlow
+        if isPreview then
+            dispelGlow = (aura and aura.previewDispelGlow == true)
+        else
+            dispelGlow = AuraPassesFilter(unit, aura and aura.auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE")
+        end
+
+        if dispelGlow then
+            return HIGHLIGHT_GOLD_R, HIGHLIGHT_GOLD_G, HIGHLIGHT_GOLD_B, HIGHLIGHT_GOLD_A
+        end
+        return nil
+    end
+
+    if auraType == "BUFF" and (not isFriend) and db.buffsPurgeGlow then
+        local purgeGlow
+        if isPreview then
+            purgeGlow = (aura and aura.previewPurgeGlow == true)
+        else
+            purgeGlow = IsEnemyBuffDispellableLikePlatynator(aura)
+        end
+
+        if purgeGlow then
+            return GetEnemyBuffPurgeGlowColor(unit, aura)
+        end
+    end
+
+    return nil
+end
+
+local function EvaluateEnemyBuffMode(unit, aura, mode, importantSet)
+    if mode == "PURGE" then
+        return IsEnemyBuffDispellableLikePlatynator(aura)
+    elseif mode == "IMPORTANT" then
+        return IsEnemyImportant(aura and aura.auraInstanceID, importantSet)
+    elseif mode == "IMPORTANT_AND_PURGE" then
+        local purgeable = IsEnemyBuffDispellableLikePlatynator(aura)
+        local important = IsEnemyImportant(aura and aura.auraInstanceID, importantSet)
+        return important and purgeable
+    elseif mode == "IMPORTANT_OR_PURGE" then
+        local purgeable = IsEnemyBuffDispellableLikePlatynator(aura)
+        local important = IsEnemyImportant(aura and aura.auraInstanceID, importantSet)
+        return important or purgeable
+    elseif mode == "BIG_DEFENSIVE" then
+        return AuraPassesFilter(unit, aura and aura.auraInstanceID, "HELPFUL|BIG_DEFENSIVE")
+    elseif mode == "EXTERNAL_DEFENSIVE" then
+        return AuraPassesFilter(unit, aura and aura.auraInstanceID, "HELPFUL|EXTERNAL_DEFENSIVE")
+    elseif mode == "BIG_OR_EXTERNAL_DEFENSIVE" then
+        return AuraPassesFilter(unit, aura and aura.auraInstanceID, "HELPFUL|BIG_DEFENSIVE")
+            or AuraPassesFilter(unit, aura and aura.auraInstanceID, "HELPFUL|EXTERNAL_DEFENSIVE")
+    end
+    return true
+end
+
+local function EvaluateEnemyDebuffMode(unit, aura, mode, importantSet)
+    local auraInstanceID = aura and aura.auraInstanceID
+    if mode == "MINE" then
+        return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|PLAYER")
+    elseif mode == "MINE_AND_IMPORTANT" then
+        return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|PLAYER")
+            and IsEnemyImportant(auraInstanceID, importantSet)
+    elseif mode == "IMPORTANT" then
+        return IsEnemyImportant(auraInstanceID, importantSet)
+    end
+    return true
+end
+
 local function ProcessAuraCategory(frame, unit, db, gdb, auraType, ignoreMap)
     local st = GetState(frame)
-    local pool, enabled, filter, size, iconH, posX, posY, align, spacing, timerEdge, timerEnable, stacksEnable
+    local pool, enabled, baseFilter, size, iconH, posX, posY, align, spacing, timerEdge, timerEnable, stacksEnable
 
     local isFriend = UnitIsFriend("player", unit)
     local isTarget = unit and UnitExists("target") and UnitIsUnit(unit, "target")
 
-    -- One dropdown mode per context (friendly/enemy) and per aura type.
-    local friendlyBuffMode  = db.buffsFriendlyFilterMode
+    local friendlyBuffMode = db.buffsFriendlyFilterMode
     local friendlyDebuffMode = db.debuffsFriendlyFilterMode
-    local enemyBuffMode     = db.buffsEnemyFilterMode
-    local enemyDebuffMode   = db.debuffsEnemyFilterMode
+    local enemyBuffMode = db.buffsEnemyFilterMode
+    local enemyDebuffMode = db.debuffsEnemyFilterMode
 
-    -- РАСПРЕДЕЛЕНИЕ НАСТРОЕК ПО КАТЕГОРИЯМ (ДОБАВЛЕНО ЧТЕНИЕ ALIGN)
     if auraType == "BUFF" then
         pool = st.buffs
         enabled = db.buffsEnable
-        if isFriend then
-            if friendlyBuffMode == "MINE" then
-                filter = "HELPFUL|PLAYER"
-            elseif friendlyBuffMode == "IMPORTANT" then
-                filter = "HELPFUL|RAID"
-            elseif friendlyBuffMode == "MINE_IMPORTANT" then
-                filter = "HELPFUL|RAID|PLAYER"
-            else
-                filter = "HELPFUL"
-            end
-        else
-            -- Enemy buffs: fetch all helpful auras; extra filtering happens below by mode.
-            filter = "HELPFUL"
-        end
+        baseFilter = "HELPFUL"
         size = db.buffsSize or 20
         posX = db.buffsX or 0
         posY = db.buffsY or 18
@@ -655,7 +815,7 @@ local function ProcessAuraCategory(frame, unit, db, gdb, auraType, ignoreMap)
     elseif auraType == "CC" then
         pool = st.cc
         enabled = db.ccEnable
-        filter = db.ccOnlyMine and "HARMFUL|CROWD_CONTROL|PLAYER" or "HARMFUL|CROWD_CONTROL"
+        baseFilter = db.ccOnlyMine and "HARMFUL|CROWD_CONTROL|PLAYER" or "HARMFUL|CROWD_CONTROL"
         size = db.ccSize or 26
         posX = db.ccX or 0
         posY = db.ccY or 65
@@ -668,16 +828,7 @@ local function ProcessAuraCategory(frame, unit, db, gdb, auraType, ignoreMap)
     elseif auraType == "DEBUFF" then
         pool = st.debuffs
         enabled = db.debuffsEnable
-        if isFriend then
-            filter = "HARMFUL"
-        else
-            -- Enemy debuffs: mine modes use PLAYER as base, others fetch all.
-            if enemyDebuffMode == "MINE" or enemyDebuffMode == "MINE_AND_IMPORTANT" then
-                filter = "HARMFUL|PLAYER"
-            else
-                filter = "HARMFUL"
-            end
-        end
+        baseFilter = "HARMFUL"
         size = db.debuffsSize or 20
         posX = db.debuffsX or 0
         posY = db.debuffsY or 40
@@ -689,144 +840,90 @@ local function ProcessAuraCategory(frame, unit, db, gdb, auraType, ignoreMap)
         stacksEnable = (db.debuffsStacksEnable ~= false)
     end
 
-
-
     if not enabled then
-        -- Скрываем иконки выключенного пула
         for _, icon in ipairs(pool) do HideAuraIcon(icon) end
         return
     end
 
-    -- Data layer provides ordered auraInstanceID lists
     local ids = (NS.AurasData and NS.AurasData.GetIDs) and NS.AurasData.GetIDs(frame, auraType) or nil
     if not ids then
         for _, icon in ipairs(pool) do HideAuraIcon(icon) end
         return
     end
+
     local usePandemic
     if auraType == "BUFF" then
         usePandemic = (db.buffsPandemic ~= false)
     elseif auraType == "DEBUFF" then
         usePandemic = (db.debuffsPandemic ~= false)
-    else -- CC
+    else
         usePandemic = (db.ccPandemic ~= false)
     end
-	local maxAuras = 8
+    local maxAuras = 8
 
+    local importantSet
+    if not isFriend then
+        if auraType == "BUFF" and (enemyBuffMode == "IMPORTANT" or enemyBuffMode == "IMPORTANT_AND_PURGE" or enemyBuffMode == "IMPORTANT_OR_PURGE") then
+            importantSet = BuildEnemyImportantSet(frame, unit, "BUFF")
+        elseif auraType == "DEBUFF" and (enemyDebuffMode == "IMPORTANT" or enemyDebuffMode == "MINE_AND_IMPORTANT") then
+            importantSet = BuildEnemyImportantSet(frame, unit, "DEBUFF")
+        end
+    end
 
-	-- ENEMY AURAS: Blizzard "nameplate-important" set (used by enemy IMPORTANT modes).
-	-- We intersect by auraInstanceID with Blizzard's nameplate lists (preferred),
-	-- and fall back to INCLUDE_NAME_PLATE_ONLY if lists are unavailable.
-	local importantSet
-	if not isFriend then
-		if auraType == "BUFF" then
-			if enemyBuffMode == "IMPORTANT" or enemyBuffMode == "IMPORTANT_AND_PURGE" or enemyBuffMode == "IMPORTANT_OR_PURGE" then
-				importantSet = BuildBlizzardNameplateAuraSet(frame, "BUFF")
-				if not importantSet then
-					importantSet = BuildNameplateOnlyAuraSet(unit, "HELPFUL|INCLUDE_NAME_PLATE_ONLY")
-				end
-			end
-		elseif auraType == "DEBUFF" then
-			if enemyDebuffMode == "IMPORTANT" or enemyDebuffMode == "MINE_AND_IMPORTANT" then
-				importantSet = BuildBlizzardNameplateAuraSet(frame, "DEBUFF")
-				if not importantSet then
-					importantSet = BuildNameplateOnlyAuraSet(unit, "HARMFUL|INCLUDE_NAME_PLATE_ONLY")
-				end
-			end
-		end
-	end
-	local activeCount = 0-- Per-category styling (avoid per-update string concatenations)
-local keys = GetAuraStyleKeys(auraType)
-local fontPath = NS.GetFontPath(gdb and gdb.globalFont)
+    local activeCount = 0
+    local keys = GetAuraStyleKeys(auraType)
+    local fontPath = NS.GetFontPath(gdb and gdb.globalFont)
 
-local timeFontSize = db[keys.timeFontSize] or 12
-local timeX = db[keys.timeX] or 0
-local timeY = db[keys.timeY] or 0
-local timeColor = db[keys.timeColor]
+    local timeFontSize = db[keys.timeFontSize] or 12
+    local timeX = db[keys.timeX] or 0
+    local timeY = db[keys.timeY] or 0
+    local timeColor = db[keys.timeColor]
 
-local stackFontSize = db[keys.stackFontSize] or 10
-local stackX = db[keys.stackX] or 2
-local stackY = db[keys.stackY] or -2
-local stackColor = db[keys.stackColor]
+    local stackFontSize = db[keys.stackFontSize] or 10
+    local stackX = db[keys.stackX] or 2
+    local stackY = db[keys.stackY] or -2
+    local stackColor = db[keys.stackColor]
 
-local borderEnabled = db[keys.borderEnable]
-local borderThickness = db[keys.borderThickness]
-local borderColor = db[keys.borderColor]
+    local borderEnabled = db[keys.borderEnable]
+    local borderThickness = db[keys.borderThickness]
+    local borderColor = db[keys.borderColor]
 
-local nonTargetAlphaEnable, nonTargetAlpha, nonTargetScaleEnable, nonTargetScale = GetAuraNonTargetSettings(db, auraType)
-nonTargetAlpha = tonumber(nonTargetAlpha) or 0.5
-if nonTargetAlpha < 0 then nonTargetAlpha = 0 elseif nonTargetAlpha > 1 then nonTargetAlpha = 1 end
-nonTargetScale = tonumber(nonTargetScale) or 0.85
-if nonTargetScale < 0.3 then nonTargetScale = 0.3 elseif nonTargetScale > 1 then nonTargetScale = 1 end
+    local nonTargetAlphaEnable, nonTargetAlpha, nonTargetScaleEnable, nonTargetScale = GetAuraNonTargetSettings(db, auraType)
+    nonTargetAlpha = tonumber(nonTargetAlpha) or 0.5
+    if nonTargetAlpha < 0 then nonTargetAlpha = 0 elseif nonTargetAlpha > 1 then nonTargetAlpha = 1 end
+    nonTargetScale = tonumber(nonTargetScale) or 0.85
+    if nonTargetScale < 0.3 then nonTargetScale = 0.3 elseif nonTargetScale > 1 then nonTargetScale = 1 end
 
-local renderScale = 1
-if not isTarget and nonTargetScaleEnable then
-    renderScale = nonTargetScale
-end
+    local renderScale = 1
+    if not isTarget and nonTargetScaleEnable then
+        renderScale = nonTargetScale
+    end
 
-local renderAlpha = 1
-if not isTarget and nonTargetAlphaEnable then
-    renderAlpha = nonTargetAlpha
-end
+    local renderAlpha = 1
+    if not isTarget and nonTargetAlphaEnable then
+        renderAlpha = nonTargetAlpha
+    end
 
-    -- 1. Сначала применяем данные ко всем валидным аурам
     for _, auraInstanceID in ipairs(ids) do
         local aura = (NS.AurasData and NS.AurasData.GetAura) and NS.AurasData.GetAura(frame, unit, auraInstanceID) or nil
         if aura and not (ignoreMap and ignoreMap[aura.auraInstanceID]) then
-            local show = true
+            local show = AuraPassesFilter(unit, aura.auraInstanceID, baseFilter)
 
-            -- Apply base filter (HELPFUL|PLAYER, HARMFUL|PLAYER, etc.)
-            if C_UnitAuras and C_UnitAuras.IsAuraFilteredOutByInstanceID then
-                if C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, aura.auraInstanceID, filter) then
-                    show = false
-                end
-            end
-
-            -- FRIENDLY DEBUFFS: dropdown modes (IMPORTANT=RAID)
-            if show and auraType == "DEBUFF" and isFriend and C_UnitAuras and C_UnitAuras.IsAuraFilteredOutByInstanceID then
-                if friendlyDebuffMode == "IMPORTANT" then
-                    if C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, aura.auraInstanceID, "HARMFUL|RAID") then
-                        show = false
+            if show then
+                if auraType == "BUFF" then
+                    if isFriend then
+                        show = EvaluateFriendlyBuffMode(unit, aura, friendlyBuffMode)
+                    else
+                        show = EvaluateEnemyBuffMode(unit, aura, enemyBuffMode, importantSet)
                     end
-                elseif friendlyDebuffMode == "DISPEL" then
-                    if C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, aura.auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE") then
-                        show = false
-                    end
-                elseif friendlyDebuffMode == "IMPORTANT_AND_DISPEL" then
-                    if C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, aura.auraInstanceID, "HARMFUL|RAID") then
-                        show = false
-                    elseif C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, aura.auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE") then
-                        show = false
-                    end
-                elseif friendlyDebuffMode == "IMPORTANT_OR_DISPEL" then
-                    local important = not C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, aura.auraInstanceID, "HARMFUL|RAID")
-                    local dispel = SafeBool(aura and aura.canActivePlayerDispel)
-                    if not (important or dispel) then
-                        show = false
+                elseif auraType == "DEBUFF" then
+                    if isFriend then
+                        show = EvaluateFriendlyDebuffMode(unit, aura, friendlyDebuffMode)
+                    else
+                        show = EvaluateEnemyDebuffMode(unit, aura, enemyDebuffMode, importantSet)
                     end
                 end
             end
-
-            -- ENEMY IMPORTANT (NAMEPLATE): intersect by auraInstanceID
-            if show and (not isFriend) and importantSet then
-                if not importantSet[aura.auraInstanceID] then
-                    show = false
-                end
-            end
-
-            -- ENEMY BUFFS: purge/steal filter modes
-            if show and (not isFriend) and auraType == "BUFF" then
-                local purgeable = (NS and NS.IsEnemyBuffPurgeable) and NS.IsEnemyBuffPurgeable(aura) or false
-                if enemyBuffMode == "PURGE" then
-                    show = purgeable
-                elseif enemyBuffMode == "IMPORTANT_AND_PURGE" then
-                    show = purgeable and (not importantSet or importantSet[aura.auraInstanceID])
-                elseif enemyBuffMode == "IMPORTANT_OR_PURGE" then
-                    local imp = (not importantSet) or importantSet[aura.auraInstanceID]
-                    show = imp or purgeable
-                end
-            end
-
 
             if show then
                 activeCount = activeCount + 1
@@ -859,7 +956,7 @@ end
                 ApplyAuraBorderStyle(icon, borderEnabled, borderThickness, borderColor)
                 icon.tex:SetTexture(aura.icon)
 
-                                if stacksEnable == false then
+                if stacksEnable == false then
                     icon.count:Hide()
                 else
                     local countStr = C_UnitAuras.GetAuraApplicationDisplayCount(unit, aura.auraInstanceID, 2, 1000)
@@ -871,15 +968,11 @@ end
                     end
                 end
 
-                -- Подсветка аур (dispel/purge/steal)
-                -- 1) Дебаффы на союзниках: если диспелится мной (Blizzard flag canActivePlayerDispel)
-                -- 2) Баффы на врагах: если можно снять/украсть (Purge/Spellsteal и аналоги)
-                local dispelGlow = false
-                if auraType == "DEBUFF" and isFriend and db.debuffsDispelGlow then
-                    dispelGlow = SafeBool(aura and aura.canActivePlayerDispel)
-                elseif auraType == "BUFF" and (not isFriend) and db.buffsPurgeGlow then
-                    dispelGlow = (NS and NS.IsEnemyBuffPurgeable) and NS.IsEnemyBuffPurgeable(aura) or false
-                end
+                -- Подсветка аур:
+                -- 1) Дебаффы на союзниках: реально рассеиваемые текущим игроком
+                -- 2) Баффы на врагах: ауры с dispel type (визуальный признак, не player-aware проверка)
+                local dispelGlowR, dispelGlowG, dispelGlowB, dispelGlowA = GetAuraHighlightColor(unit, auraType, isFriend, db, aura, false)
+                local dispelGlow = dispelGlowR ~= nil
 
                 local durationInfo = nil
 
@@ -910,7 +1003,7 @@ end
                 end
 
                 if dispelGlow then
-                    SetAuraHighlight(icon, true, HIGHLIGHT_GOLD_R, HIGHLIGHT_GOLD_G, HIGHLIGHT_GOLD_B, HIGHLIGHT_GOLD_A)
+                    SetAuraHighlight(icon, true, dispelGlowR, dispelGlowG, dispelGlowB, dispelGlowA)
                 else
                     SetAuraHighlight(icon, false)
                 end
@@ -1157,15 +1250,11 @@ end
             RestoreCooldownTextColor(icon)
         end
 
-        local previewHighlight = false
-        if auraType == "DEBUFF" and isFriend and db.debuffsDispelGlow then
-            previewHighlight = (a.previewDispelGlow == true)
-        elseif auraType == "BUFF" and (not isFriend) and db.buffsPurgeGlow then
-            previewHighlight = (a.previewPurgeGlow == true)
-        end
+        local previewHighlightR, previewHighlightG, previewHighlightB, previewHighlightA = GetAuraHighlightColor(nil, auraType, isFriend, db, a, true)
+        local previewHighlight = previewHighlightR ~= nil
 
         if previewHighlight then
-            SetAuraHighlight(icon, true, HIGHLIGHT_GOLD_R, HIGHLIGHT_GOLD_G, HIGHLIGHT_GOLD_B, HIGHLIGHT_GOLD_A)
+            SetAuraHighlight(icon, true, previewHighlightR, previewHighlightG, previewHighlightB, previewHighlightA)
         else
             SetAuraHighlight(icon, false)
         end

@@ -174,7 +174,7 @@ NS.DB.unitDefaults = {
     -- Friendly players: instance-only names mode (party/raid via Blizzard CVars)
     friendlyInstanceNamesEnable = false,
     friendlyInstanceNamesClassColor = true,
-    friendlyInstanceNamesFontSize = 9,
+    friendlyInstanceNamesFontSize = 10,
     friendlyInstanceNamesFontOutline = "SHADOW",
 
     -- Текст гильдии
@@ -257,11 +257,11 @@ NS.DB.unitDefaults = {
     -- Враги: показывать только снимаемые/воруемые баффы (Purge/Spellsteal)
     -- Враги: подсветка баффов, которые можно снять/украсть (Purge/Spellsteal и аналоги)
     buffsPurgeGlow = false,
-    -- Dropdown aura filters (single choice)
-    -- Friendly IMPORTANT uses Blizzard RAID filters; Enemy IMPORTANT uses Blizzard nameplate-only list.
-    buffsFriendlyFilterMode = "ALL", -- ALL|MINE|MINE_IMPORTANT|IMPORTANT
-    debuffsFriendlyFilterMode = "ALL", -- ALL|IMPORTANT|DISPEL|IMPORTANT_AND_DISPEL|IMPORTANT_OR_DISPEL
-    buffsEnemyFilterMode = "ALL", -- ALL|IMPORTANT|PURGE|IMPORTANT_AND_PURGE|IMPORTANT_OR_PURGE
+    -- Aura filters (single choice).
+    -- Friendly IMPORTANT modes use Blizzard RAID filters. Enemy IMPORTANT modes use Blizzard nameplate-important sets.
+    buffsFriendlyFilterMode = "ALL", -- ALL|MINE|MINE_IMPORTANT|IMPORTANT|RAID_IN_COMBAT|BIG_DEFENSIVE|EXTERNAL_DEFENSIVE|BIG_OR_EXTERNAL_DEFENSIVE
+    debuffsFriendlyFilterMode = "ALL", -- ALL|DISPEL|IMPORTANT|RAID_IN_COMBAT|IMPORTANT_AND_DISPEL|IMPORTANT_OR_DISPEL
+    buffsEnemyFilterMode = "ALL", -- ALL|IMPORTANT|PURGE|IMPORTANT_AND_PURGE|IMPORTANT_OR_PURGE|BIG_DEFENSIVE|EXTERNAL_DEFENSIVE|BIG_OR_EXTERNAL_DEFENSIVE
     debuffsEnemyFilterMode = "ALL", -- ALL|IMPORTANT|MINE|MINE_AND_IMPORTANT
 
 
@@ -272,9 +272,6 @@ NS.DB.unitDefaults = {
     debuffsEnable = true,
     debuffsSize = 20, debuffsX = 0, debuffsY = 20, debuffsAlign = "CENTER",
     debuffsSpacing = 5, debuffsIconHeight = 20, debuffsTimerEdge = false, debuffsTimerEnable = true, debuffsStacksEnable = true,
-    -- Враги: показывать только мои дебаффы
-    -- Враги: показывать только "важные" среди моих дебаффов (как у Blizzard nameplates)
-    -- Враги: показывать только снимаемые/воруемые баффы (Purge/Spellsteal)
     debuffsBorderEnable = true,
     debuffsBorderThickness = 2,
     debuffsBorderColor = {r=0, g=0, b=0, a=1},
@@ -312,6 +309,80 @@ NS.DB.unitDefaults = {
     ccStackFontSize = 10, ccStackX = 2, ccStackY = -2, ccStackColor = {r=1, g=1, b=1},
 }
 
+local function IsFriendlyUnitType(unitType)
+    return unitType == NS.UNIT_TYPES.FRIENDLY_PLAYER or unitType == NS.UNIT_TYPES.FRIENDLY_NPC
+end
+
+function NS.DB.NormalizeAuraFilterSettings(unitType, unitDB)
+    if type(unitDB) ~= "table" then return end
+
+    local buffsFriendlyMap = {
+        ONLY_MINE = "MINE",
+        ONLY_MINE_IMPORTANT = "MINE_IMPORTANT",
+        ONLY_RAID = "IMPORTANT",
+        ONLY_IMPORTANT = "RAID_IN_COMBAT",
+        ONLY_DEFENSIVE = "BIG_DEFENSIVE",
+        ONLY_EXTERNAL_DEFENSIVE = "EXTERNAL_DEFENSIVE",
+    }
+    local debuffsFriendlyMap = {
+        ONLY_DISPEL = "DISPEL",
+        ONLY_RAID = "IMPORTANT",
+        ONLY_IMPORTANT = "RAID_IN_COMBAT",
+        ONLY_IMPORTANT_OR_DISPEL = "IMPORTANT_OR_DISPEL",
+    }
+    local buffsEnemyMap = {
+        ONLY_IMPORTANT = "IMPORTANT",
+        ONLY_PURGEABLE = "PURGE",
+        ONLY_IMPORTANT_OR_PURGEABLE = "IMPORTANT_OR_PURGE",
+        ONLY_DEFENSIVE = "BIG_DEFENSIVE",
+        ONLY_EXTERNAL_DEFENSIVE = "EXTERNAL_DEFENSIVE",
+    }
+    local debuffsEnemyMap = {
+        ONLY_IMPORTANT = "IMPORTANT",
+        ONLY_MINE = "MINE",
+        ONLY_MINE_BLIZZARD_IMPORTANT = "MINE_AND_IMPORTANT",
+    }
+
+    local function normalizeKey(key, valid, map)
+        local value = unitDB[key]
+        if value == nil then return end
+        if map and map[value] then
+            value = map[value]
+            unitDB[key] = value
+        end
+        if not valid[value] then
+            unitDB[key] = CopyValue(NS.DB.unitDefaults[key])
+        end
+    end
+
+    normalizeKey("buffsFriendlyFilterMode", {
+        ALL = true, MINE = true, MINE_IMPORTANT = true, IMPORTANT = true,
+        RAID_IN_COMBAT = true, BIG_DEFENSIVE = true, EXTERNAL_DEFENSIVE = true,
+        BIG_OR_EXTERNAL_DEFENSIVE = true,
+    }, buffsFriendlyMap)
+
+    normalizeKey("debuffsFriendlyFilterMode", {
+        ALL = true, DISPEL = true, IMPORTANT = true, RAID_IN_COMBAT = true,
+        IMPORTANT_AND_DISPEL = true, IMPORTANT_OR_DISPEL = true,
+    }, debuffsFriendlyMap)
+
+    normalizeKey("buffsEnemyFilterMode", {
+        ALL = true, IMPORTANT = true, PURGE = true, IMPORTANT_AND_PURGE = true,
+        IMPORTANT_OR_PURGE = true, BIG_DEFENSIVE = true, EXTERNAL_DEFENSIVE = true,
+        BIG_OR_EXTERNAL_DEFENSIVE = true,
+    }, buffsEnemyMap)
+
+    normalizeKey("debuffsEnemyFilterMode", {
+        ALL = true, IMPORTANT = true, MINE = true, MINE_AND_IMPORTANT = true,
+    }, debuffsEnemyMap)
+
+    if unitDB.ccOnlyMine == nil then
+        unitDB.ccOnlyMine = CopyValue(NS.DB.unitDefaults.ccOnlyMine)
+    elseif type(unitDB.ccOnlyMine) ~= "boolean" then
+        unitDB.ccOnlyMine = false
+    end
+end
+
 function NS.DB.Init()
     BlizzPlatesFixDB = BlizzPlatesFixDB or {}
 
@@ -347,6 +418,7 @@ function NS.DB.Init()
                     prof.Units[unitType][k] = CopyValue(v)
                 end
             end
+            NS.DB.NormalizeAuraFilterSettings(unitType, prof.Units[unitType])
         end
     end
 
@@ -482,7 +554,11 @@ local function BuildDynIgnore(sectionKey, toType)
         end
         return dynIgnore
     elseif sectionKey == "CC" then
-        return { ccPreview = true } -- настройки превью не копируем
+        local dynIgnore = { ccPreview = true } -- настройки превью не копируем
+        if IsFriendlyUnitType(toType) then
+            dynIgnore.ccOnlyMine = true
+        end
+        return dynIgnore
     end
 
     return nil
@@ -520,6 +596,8 @@ function NS.DB.CopySection(fromType, toType, sectionKey)
     else
         return false, "bad_rule"
     end
+
+    NS.DB.NormalizeAuraFilterSettings(toType, dest)
 
     -- Принудительное обновление неймплейтов после копирования
     if NS.RequestUpdateAll then
@@ -570,6 +648,8 @@ function NS.DB.CopySections(fromType, toType, sectionKeys)
         end
     end
 
+    NS.DB.NormalizeAuraFilterSettings(toType, dest)
+
     if any then
         if NS.RequestUpdateAll then
             NS.RequestUpdateAll("copy_sections", true)
@@ -602,6 +682,8 @@ function NS.DB.CopyProfile(fromType, toType)
             dest[k] = CopyValue(v)
         end
     end
-    
+
+    NS.DB.NormalizeAuraFilterSettings(toType, dest)
+
     if NS.ForceUpdateAll then NS.ForceUpdateAll() end
 end

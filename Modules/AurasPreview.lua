@@ -72,6 +72,7 @@ local function MakeEntry(spellID, duration, stacks, forcePandemic, extra)
         forcePandemic = forcePandemic and true or false,
         previewPurgeGlow = extra and extra.previewPurgeGlow or false,
         previewDispelGlow = extra and extra.previewDispelGlow or false,
+        dispelName = extra and extra.dispelName or nil,
     }
 end
 
@@ -81,10 +82,10 @@ local function EnsureState()
     -- BUFF
     PreviewState.buffs = {
         MakeEntry(21562, 120, 3),        -- Power Word: Fortitude
-        MakeEntry(6673, 120, 2),         -- Battle Shout
+        MakeEntry(1719, 12, 2, false, { previewPurgeGlow = true, dispelName = "" }), -- Recklessness (preview purge/red)
         MakeEntry(104773, 12, 0, true),                          -- Unending Resolve
         MakeEntry(1022, 10, 4),                                  -- Blessing of Protection
-        MakeEntry(12472, 20, 0, false, { previewPurgeGlow = true }), -- Icy Veins (preview purge/steal)
+        MakeEntry(12472, 20, 0, false, { previewPurgeGlow = true, dispelName = "Magic" }), -- Icy Veins (preview purge/steal)
     }
 
     -- DEBUFF

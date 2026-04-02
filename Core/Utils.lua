@@ -176,27 +176,6 @@ function NS.GetUnitConfig(unit)
     return udb, gdb
 end
 
--- Enemy BUFF highlight should describe the aura, not the player's current capabilities.
--- I.e. if the user enables the option, show "purge/spellsteal-able" buffs even if the
--- current character/spec can't actually remove them.
-function NS.IsEnemyBuffPurgeable(aura)
-    if not aura then return false end
-
-    -- Prefer explicit signals if present.
-    if SafeBool(aura.isStealable) then
-        return true
-    end
-
-    -- Fallback: magic buffs are typically purgeable.
-    local dispelName = SafeValue(aura.dispelName)
-    if dispelName == "Magic" then
-        return true
-    end
-
-    return false
-end
-
--- Returns true if the plate is in simplified mode and is NOT the current target.
 function NS.IsSimplifiedNotTarget(frame, unit)
     if frame and frame.IsSimplified and frame:IsSimplified() then
         if frame.IsTarget and frame:IsTarget() then

@@ -425,24 +425,31 @@ function NS.Options.GetTable(mainIdx, subIdx)
 
             Add("header", NS.L("Additional effects"), nil, nil, nil, nil, nil, nil, 1)
             if dbContext == NS.UNIT_TYPES.ENEMY_PLAYER or dbContext == NS.UNIT_TYPES.ENEMY_NPC then
-                Add("checkbox", NS.L("Highlight if dispellable/stealable"), nil, "buffsPurgeGlow", nil, nil, nil, nil, 1)
+                Add("checkbox", NS.L("Highlight if dispellable"), nil, "buffsPurgeGlow", nil, nil, nil, nil, 1)
             end
             Add("checkbox", NS.L("Non-target alpha"), nil, "buffsNonTargetAlphaEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
             Add("slider", NS.L("Alpha"), nil, "buffsNonTargetAlpha", 0, 1, 0.05, nil, 1, {offX=20, requires = { key = "buffsNonTargetAlphaEnable", value = true }})
             Add("checkbox", NS.L("Non-target scale"), nil, "buffsNonTargetScaleEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
             Add("slider", NS.L("Scale"), nil, "buffsNonTargetScale", 0.3, 1, 0.05, nil, 1, {offX=20, requires = { key = "buffsNonTargetScaleEnable", value = true }})
             local buffFilterFriendly = {
-                { text = NS.L("All buffs"), value = "ALL" },
-                { text = NS.L("Only my buffs"), value = "MINE" },
-                { text = NS.L("Only my important buffs"), value = "MINE_IMPORTANT" },
-                { text = NS.L("Only important buffs"), value = "IMPORTANT" },
+                { text = NS.L("All"), value = "ALL" },
+                { text = NS.L("Mine"), value = "MINE" },
+                { text = NS.L("My raid"), value = "MINE_IMPORTANT" },
+                { text = NS.L("Raid"), value = "IMPORTANT" },
+                { text = NS.L("Raid in combat"), value = "RAID_IN_COMBAT" },
+                { text = NS.L("Defensive"), value = "BIG_DEFENSIVE" },
+                { text = NS.L("External defensive"), value = "EXTERNAL_DEFENSIVE" },
+                { text = NS.L("Defensive or external defensive"), value = "BIG_OR_EXTERNAL_DEFENSIVE" },
             }
             local buffFilterEnemy = {
-                { text = NS.L("All buffs"), value = "ALL" },
-                { text = NS.L("Only important buffs"), value = "IMPORTANT" },
-                { text = NS.L("Only dispellable/stealable"), value = "PURGE" },
-                { text = NS.L("Only important dispellable/stealable"), value = "IMPORTANT_AND_PURGE" },
-                { text = NS.L("Important or dispellable/stealable"), value = "IMPORTANT_OR_PURGE" },
+                { text = NS.L("All"), value = "ALL" },
+                { text = NS.L("Important"), value = "IMPORTANT" },
+                { text = NS.L("Purgeable"), value = "PURGE" },
+                { text = NS.L("Important and purgeable"), value = "IMPORTANT_AND_PURGE" },
+                { text = NS.L("Important or purgeable"), value = "IMPORTANT_OR_PURGE" },
+                { text = NS.L("Defensive"), value = "BIG_DEFENSIVE" },
+                { text = NS.L("External defensive"), value = "EXTERNAL_DEFENSIVE" },
+                { text = NS.L("Defensive or external defensive"), value = "BIG_OR_EXTERNAL_DEFENSIVE" },
             }
             if dbContext == NS.UNIT_TYPES.ENEMY_PLAYER or dbContext == NS.UNIT_TYPES.ENEMY_NPC then
                 Add("dropdown", NS.L("Buff filter"), nil, "buffsEnemyFilterMode", nil, nil, nil, buffFilterEnemy, 1)
@@ -517,17 +524,18 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("checkbox", NS.L("Non-target scale"), nil, "debuffsNonTargetScaleEnable", nil, nil, nil, nil, 1, {onChange=function() if NS.RefreshGUI then NS.RefreshGUI(true) end end})
             Add("slider", NS.L("Scale"), nil, "debuffsNonTargetScale", 0.3, 1, 0.05, nil, 1, {offX=20, requires = { key = "debuffsNonTargetScaleEnable", value = true }})
             local debuffFilterFriendly = {
-                { text = NS.L("All debuffs"), value = "ALL" },
-                { text = NS.L("Only important debuffs"), value = "IMPORTANT" },
-                { text = NS.L("Only dispellable by me"), value = "DISPEL" },
-                { text = NS.L("Only important dispellable by me"), value = "IMPORTANT_AND_DISPEL" },
-                { text = NS.L("Important or dispellable by me"), value = "IMPORTANT_OR_DISPEL" },
+                { text = NS.L("All"), value = "ALL" },
+                { text = NS.L("Dispellable"), value = "DISPEL" },
+                { text = NS.L("Raid"), value = "IMPORTANT" },
+                { text = NS.L("Raid in combat"), value = "RAID_IN_COMBAT" },
+                { text = NS.L("Raid and dispellable"), value = "IMPORTANT_AND_DISPEL" },
+                { text = NS.L("Raid or dispellable"), value = "IMPORTANT_OR_DISPEL" },
             }
             local debuffFilterEnemy = {
-                { text = NS.L("All debuffs"), value = "ALL" },
-                { text = NS.L("Only important debuffs"), value = "IMPORTANT" },
-                { text = NS.L("Only my debuffs"), value = "MINE" },
-                { text = NS.L("Only my important debuffs"), value = "MINE_AND_IMPORTANT" },
+                { text = NS.L("All"), value = "ALL" },
+                { text = NS.L("Important"), value = "IMPORTANT" },
+                { text = NS.L("Mine"), value = "MINE" },
+                { text = NS.L("My important"), value = "MINE_AND_IMPORTANT" },
             }
             if dbContext == NS.UNIT_TYPES.ENEMY_PLAYER or dbContext == NS.UNIT_TYPES.ENEMY_NPC then
                 Add("dropdown", NS.L("Debuff filter"), nil, "debuffsEnemyFilterMode", nil, nil, nil, debuffFilterEnemy, 1)
