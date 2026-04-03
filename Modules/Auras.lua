@@ -694,7 +694,7 @@ local function EvaluateFriendlyDebuffMode(unit, aura, mode)
     return true
 end
 
-local function IsEnemyBuffDispellableLikePlatynator(aura)
+local function IsEnemyBuffPurgeable(aura)
     if not aura then return false end
     return aura.dispelName ~= nil
 end
@@ -739,7 +739,7 @@ local function GetAuraHighlightColor(unit, auraType, isFriend, db, aura, isPrevi
         if isPreview then
             purgeGlow = (aura and aura.previewPurgeGlow == true)
         else
-            purgeGlow = IsEnemyBuffDispellableLikePlatynator(aura)
+            purgeGlow = IsEnemyBuffPurgeable(aura)
         end
 
         if purgeGlow then
@@ -752,15 +752,15 @@ end
 
 local function EvaluateEnemyBuffMode(unit, aura, mode, importantSet)
     if mode == "PURGE" then
-        return IsEnemyBuffDispellableLikePlatynator(aura)
+        return IsEnemyBuffPurgeable(aura)
     elseif mode == "IMPORTANT" then
         return IsEnemyImportant(aura and aura.auraInstanceID, importantSet)
     elseif mode == "IMPORTANT_AND_PURGE" then
-        local purgeable = IsEnemyBuffDispellableLikePlatynator(aura)
+        local purgeable = IsEnemyBuffPurgeable(aura)
         local important = IsEnemyImportant(aura and aura.auraInstanceID, importantSet)
         return important and purgeable
     elseif mode == "IMPORTANT_OR_PURGE" then
-        local purgeable = IsEnemyBuffDispellableLikePlatynator(aura)
+        local purgeable = IsEnemyBuffPurgeable(aura)
         local important = IsEnemyImportant(aura and aura.auraInstanceID, importantSet)
         return important or purgeable
     elseif mode == "BIG_DEFENSIVE" then
