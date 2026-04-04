@@ -179,6 +179,7 @@ NS.DB.unitDefaults = {
 
     -- Текст гильдии
     guildTextEnable = false,
+    guildTextDisableTargetScale = true,
     guildTextMode = "UNDER_NAME",
     guildTextFontSize = 7,
     guildTextOutline = "SHADOW",
@@ -444,7 +445,7 @@ NS.DB.CopySectionRules = {
     GUILD = {
         mode = "keys",
         keys = {
-            "guildTextEnable", "guildTextMode",
+            "guildTextEnable", "guildTextDisableTargetScale", "guildTextMode",
             "guildTextFontSize", "guildTextOutline",
             "guildTextX", "guildTextY", "guildTextAlign",
             "guildTextWidth", "guildTextColor",

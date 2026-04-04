@@ -95,7 +95,7 @@ NS.AddLocale("zhCN", {
     ["Gradient"] = "渐变",
     ["Guild text"] = "公会文本",
     ["Anchor"] = "锚点",
-    ["Under Name"] = "名字下方",
+    ["Under Name"] = "名字下方（动态）",
     ["Below Health Bar"] = "生命条下方",
     ["Health bar"] = "生命条",
     ["Health bar color"] = "生命条颜色",

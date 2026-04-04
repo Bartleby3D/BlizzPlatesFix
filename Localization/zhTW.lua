@@ -95,7 +95,7 @@ NS.AddLocale("zhTW", {
     ["Gradient"] = "漸層",
     ["Guild text"] = "公會文字",
     ["Anchor"] = "錨點",
-    ["Under Name"] = "名字下方",
+    ["Under Name"] = "名字下方（動態）",
     ["Below Health Bar"] = "生命條下方",
     ["Health bar"] = "生命條",
     ["Health bar color"] = "生命條顏色",

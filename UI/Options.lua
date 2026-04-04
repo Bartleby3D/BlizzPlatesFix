@@ -196,6 +196,7 @@ function NS.Options.GetTable(mainIdx, subIdx)
                 local guildModeList = { { text = NS.L("Under Name"), value = "UNDER_NAME" }, { text = NS.L("Below Health Bar"), value = "BELOW_HEALTHBAR" } }
 
                 Add("header", NS.L("Font settings"), nil, nil, nil, nil, nil, nil, 1)
+                Add("checkbox", NS.L("Disable target scaling"), nil, "guildTextDisableTargetScale", nil, nil, nil, nil, 1)
                 Add("slider", NS.L("Size"), nil, "guildTextFontSize", 4, 20, 0.5, nil, 1)
                 Add("slider", NS.L("Offset X"), nil, "guildTextX", -100, 100, 0.5, nil, 1)
                 Add("slider", NS.L("Offset Y"), nil, "guildTextY", -100, 100, 0.5, nil, 1)

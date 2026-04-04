@@ -95,7 +95,7 @@ NS.AddLocale("ptBR", {
     ["Gradient"] = "Gradiente",
     ["Guild text"] = "Texto da guilda",
     ["Anchor"] = "Âncora",
-    ["Under Name"] = "Abaixo do nome",
+    ["Under Name"] = "Abaixo do nome (Dinâmico)",
     ["Below Health Bar"] = "Abaixo da barra de vida",
     ["Health bar"] = "Barra de vida",
     ["Health bar color"] = "Cor da barra de vida",

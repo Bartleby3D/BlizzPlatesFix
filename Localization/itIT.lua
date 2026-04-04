@@ -95,7 +95,7 @@ NS.AddLocale("itIT", {
     ["Gradient"] = "Gradiente",
     ["Guild text"] = "Testo gilda",
     ["Anchor"] = "Ancoraggio",
-    ["Under Name"] = "Sotto il nome",
+    ["Under Name"] = "Sotto il nome (Dinamico)",
     ["Below Health Bar"] = "Sotto la barra della salute",
     ["Health bar"] = "Barra salute",
     ["Health bar color"] = "Colore barra salute",

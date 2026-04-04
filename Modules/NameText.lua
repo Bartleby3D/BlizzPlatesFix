@@ -166,6 +166,25 @@ local function SetBlizzBlocked(frame, blocked)
 end
 
 
+local function GetExtraNameShift(frame, unit, db, gdb)
+    local guildTextModule = NS.Modules and NS.Modules.GuildText
+    if not (guildTextModule and guildTextModule.GetNameShift) then
+        return 0
+    end
+
+    local ok, shift = pcall(guildTextModule.GetNameShift, frame, unit, db, gdb)
+    if not ok then
+        return 0
+    end
+
+    shift = tonumber(shift) or 0
+    if shift < 0 then
+        shift = 0
+    end
+    return shift
+end
+
+
 local function ApplyStyle(frame, st, unit, db, gdb)
     EnsureBlizzNameHooks(frame, st)
     
@@ -267,7 +286,7 @@ local function ApplyStyle(frame, st, unit, db, gdb)
     local alignH = db.textAlign or "CENTER"
     local alignV = "BOTTOM"
     local offX = db.textX or 0
-    local offY = db.textY or 0
+    local offY = (db.textY or 0) + GetExtraNameShift(frame, unit, db, gdb)
 
     if st.lastAlignH ~= alignH then
         fs:SetJustifyH(alignH)

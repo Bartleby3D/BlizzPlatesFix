@@ -95,7 +95,7 @@ NS.AddLocale("koKR", {
     ["Gradient"] = "그라데이션",
     ["Guild text"] = "길드 텍스트",
     ["Anchor"] = "기준점",
-    ["Under Name"] = "이름 아래",
+    ["Under Name"] = "이름 아래 (동적)",
     ["Below Health Bar"] = "생명력 바 아래",
     ["Health bar"] = "생명력 바",
     ["Health bar color"] = "생명력 바 색상",

@@ -95,7 +95,7 @@ NS.AddLocale("deDE", {
     ["Gradient"] = "Farbverlauf",
     ["Guild text"] = "Gildentext",
     ["Anchor"] = "Anker",
-    ["Under Name"] = "Unter dem Namen",
+    ["Under Name"] = "Unter dem Namen (Dynamisch)",
     ["Below Health Bar"] = "Unter der Gesundheitsleiste",
     ["Health bar"] = "Lebensleiste",
     ["Health bar color"] = "Farbe der Lebensleiste",

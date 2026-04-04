@@ -95,7 +95,7 @@ NS.AddLocale("ruRU", {
     ["Gradient"] = "Градиент",
     ["Guild text"] = "Текст гильдии",
     ["Anchor"] = "Якорь",
-    ["Under Name"] = "Под именем",
+    ["Under Name"] = "Под именем (динамик)",
     ["Below Health Bar"] = "Под полоской здоровья",
     ["Health bar"] = "Полоса здоровья",
     ["Health bar color"] = "Цвет полосы здоровья",

@@ -95,7 +95,7 @@ NS.AddLocale("esMX", {
     ["Gradient"] = "Degradado",
     ["Guild text"] = "Texto de hermandad",
     ["Anchor"] = "Anclaje",
-    ["Under Name"] = "Debajo del nombre",
+    ["Under Name"] = "Debajo del nombre (Dinámico)",
     ["Below Health Bar"] = "Debajo de la barra de salud",
     ["Health bar"] = "Barra de salud",
     ["Health bar color"] = "Color de la barra de salud",

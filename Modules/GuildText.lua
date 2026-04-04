@@ -1,6 +1,7 @@
 local _, NS = ...
 
 local STANDARD_TEXT_FONT = _G.STANDARD_TEXT_FONT
+local FormatGuildText
 local State = setmetatable({}, { __mode = "k" })
 
 local function GetState(frame)
@@ -31,6 +32,119 @@ local function GetState(frame)
     return st
 end
 
+local MeasureWrapper = nil
+local MeasureFS = nil
+
+local function EnsureMeasureFontString()
+    if MeasureFS then return MeasureFS end
+
+    MeasureWrapper = CreateFrame("Frame", nil, UIParent)
+    MeasureWrapper:SetSize(1, 1)
+    MeasureWrapper:Hide()
+
+    MeasureFS = MeasureWrapper:CreateFontString(nil, "OVERLAY", nil, 7)
+    MeasureFS:Hide()
+    if MeasureFS.SetIgnoreParentScale then
+        MeasureFS:SetIgnoreParentScale(true)
+    end
+    MeasureFS:SetScale(1)
+    MeasureFS:SetNonSpaceWrap(false)
+    MeasureFS:SetWordWrap(false)
+    if MeasureFS.SetMaxLines then
+        MeasureFS:SetMaxLines(1)
+    end
+
+    return MeasureFS
+end
+
+local function GetGuildTargetScale(unit, db, gdb)
+    if not unit or not db then return 1 end
+    if UnitIsUnit(unit, "target") and not db.guildTextDisableTargetScale then
+        return tonumber(gdb and gdb.nameplateSelectedScale) or 1.2
+    end
+    return 1
+end
+
+local function GetGuildDisplayColor(unit, db)
+    local r, g, b
+    if NS.UnitColor and NS.UnitColor.GetDisconnectedColor then
+        r, g, b = NS.UnitColor.GetDisconnectedColor(unit)
+    end
+    if r ~= nil then
+        return r, g, b
+    end
+
+    local c = db and db.guildTextColor or nil
+    if not c then
+        return 1, 1, 1
+    end
+    return c.r or 1, c.g or 1, c.b or 1
+end
+
+local function MeasureGuildTextHeight(text, db, gdb, scale)
+    if not text or text == "" then return 0 end
+
+    local fs = EnsureMeasureFontString()
+    local fontScale = tonumber(scale) or 1
+    if fontScale <= 0 then
+        fontScale = 1
+    end
+
+    local fontSize = (tonumber(db and db.guildTextFontSize) or 7) * fontScale
+    if not fs then
+        return fontSize or 0
+    end
+
+    local fontPath = NS.GetFontPath(gdb and gdb.globalFont)
+    local outline = db and db.guildTextOutline or "SHADOW"
+    local fontFlag = (outline ~= "NONE" and outline ~= "SHADOW") and outline or nil
+
+    if not fs:SetFont(fontPath, fontSize, fontFlag) then
+        fs:SetFont(STANDARD_TEXT_FONT, fontSize, fontFlag)
+    end
+
+    local width = (tonumber(db and db.guildTextWidth) or 135) * fontScale
+    fs:SetWidth(width)
+    fs:SetText(text)
+
+    local h = (fs.GetStringHeight and fs:GetStringHeight()) or fontSize or 0
+    if not h or h <= 0 then
+        h = fontSize or 0
+    end
+    return h
+end
+
+local function CalculateNameShiftFromText(text, db, gdb, scale)
+    if not db or db.guildTextEnable ~= true then return 0 end
+    if (db.guildTextMode or "UNDER_NAME") ~= "UNDER_NAME" then return 0 end
+    if not text or text == "" then return 0 end
+
+    local offY = tonumber(db.guildTextY) or 0
+    local gap = 1
+    local guildHeight = MeasureGuildTextHeight(text, db, gdb, scale)
+    return math.max(0, math.ceil(guildHeight) + gap - offY)
+end
+
+local function GetNameShift(frame, unit, db, gdb)
+    if not frame or not unit or not db then return 0 end
+    if db.nameEnable == false then return 0 end
+
+    if NS.ShouldHideModuleOnSimplified and NS.ShouldHideModuleOnSimplified("GuildText", frame, unit) then
+        return 0
+    end
+
+    if not UnitIsPlayer(unit) then return 0 end
+
+    local guildName = GetGuildInfo(unit)
+    local text = FormatGuildText(guildName)
+    local targetScale = GetGuildTargetScale(unit, db, gdb)
+    return CalculateNameShiftFromText(text, db, gdb, targetScale)
+end
+
+NS.GuildText_CalculateNameShift = CalculateNameShiftFromText
+NS.GuildText_GetNameShift = GetNameShift
+
+
 local function EnsureObjects(frame, st)
     if st.wrapper and st.fs then return end
 
@@ -56,55 +170,10 @@ local function EnsureObjects(frame, st)
     frame.BPF_GuildTextFS = st.fs
 end
 
-local function ClearNameAnchorCache(st)
-    st.lastNameWrapper = nil
-    st.lastNameAlign = nil
-    st.lastNameX = nil
-    st.lastNameY = nil
-    st.lastNameShift = nil
-end
 
-local function ApplyNameWrapperShift(frame, db, st, shiftY)
-    local nameWrapper = frame and frame.BPF_NameTextWrapper
-    local hb = frame and frame.healthBar
-    if not nameWrapper or not hb or not db then
-        ClearNameAnchorCache(st)
-        return false
-    end
 
-    local align = db.textAlign or "CENTER"
-    local offX = db.textX or 0
-    local offY = (db.textY or 0) + (shiftY or 0)
-
-    if st.lastNameWrapper ~= nameWrapper or st.lastNameAlign ~= align or st.lastNameX ~= offX or st.lastNameY ~= offY or st.lastNameShift ~= shiftY then
-        nameWrapper:ClearAllPoints()
-        if align == "LEFT" then
-            nameWrapper:SetPoint("BOTTOMLEFT", hb, "TOPLEFT", offX, offY)
-        elseif align == "RIGHT" then
-            nameWrapper:SetPoint("BOTTOMRIGHT", hb, "TOPRIGHT", offX, offY)
-        else
-            nameWrapper:SetPoint("BOTTOM", hb, "TOP", offX, offY)
-        end
-        st.lastNameWrapper = nameWrapper
-        st.lastNameAlign = align
-        st.lastNameX = offX
-        st.lastNameY = offY
-        st.lastNameShift = shiftY
-    end
-
-    return true
-end
-
-local function RestoreNameWrapperShift(frame, db, st)
-    if st and st.lastNameShift ~= nil and st.lastNameShift ~= 0 then
-        ApplyNameWrapperShift(frame, db, st, 0)
-    else
-        ClearNameAnchorCache(st)
-    end
-end
 
 local function Hide(frame, db, st)
-    RestoreNameWrapperShift(frame, db, st)
     if st.fs then st.fs:Hide() end
     if st.wrapper then st.wrapper:Hide() end
     st.lastVisible = false
@@ -116,11 +185,6 @@ local function Hide(frame, db, st)
 end
 
 local function ResolveNameAnchor(frame)
-    local nameFS = frame and frame.BPF_NameTextFS
-    if nameFS and nameFS.IsShown and nameFS:IsShown() then
-        return nameFS, true
-    end
-
     local nameWrapper = frame and frame.BPF_NameTextWrapper
     if nameWrapper and nameWrapper.IsShown and nameWrapper:IsShown() then
         return nameWrapper, true
@@ -133,7 +197,7 @@ local function ResolveHealthBarAnchor(frame)
     return frame and (frame.healthBar or frame)
 end
 
-local function FormatGuildText(guildName)
+FormatGuildText = function(guildName)
     if not guildName or guildName == "" then return nil end
     if guildName:sub(1, 1) == "<" and guildName:sub(-1) == ">" then
         return guildName
@@ -174,7 +238,8 @@ local function UpdateGuildText(frame, unit, db, gdb)
     if not fs or not wrapper then return end
 
     local fontPath = NS.GetFontPath(gdb and gdb.globalFont)
-    local fontSize = db.guildTextFontSize or 7
+    local targetScale = GetGuildTargetScale(unit, db, gdb)
+    local fontSize = (db.guildTextFontSize or 7) * targetScale
     local outline = db.guildTextOutline or "SHADOW"
     local fontFlag = (outline ~= "NONE" and outline ~= "SHADOW") and outline or nil
     local wantShadow = (outline == "SHADOW")
@@ -203,7 +268,7 @@ local function UpdateGuildText(frame, unit, db, gdb)
         st.lastText = text
     end
 
-    local width = db.guildTextWidth or 135
+    local width = (db.guildTextWidth or 135) * targetScale
     if st.lastWidth ~= width then
         fs:SetWidth(width)
         st.lastWidth = width
@@ -224,10 +289,7 @@ local function UpdateGuildText(frame, unit, db, gdb)
         st.lastAlign = align
     end
 
-    local c = db.guildTextColor or {}
-    local r = c.r or 1
-    local g = c.g or 1
-    local b = c.b or 1
+    local r, g, b = GetGuildDisplayColor(unit, db)
     if st.lastColorR ~= r or st.lastColorG ~= g or st.lastColorB ~= b then
         fs:SetTextColor(r, g, b)
         st.lastColorR, st.lastColorG, st.lastColorB = r, g, b
@@ -243,24 +305,13 @@ local function UpdateGuildText(frame, unit, db, gdb)
     if mode == "UNDER_NAME" then
         local nameAnchor, hasNameAnchor = ResolveNameAnchor(frame)
         if hasNameAnchor and nameAnchor then
-            local guildHeight = (fs.GetStringHeight and fs:GetStringHeight()) or fontSize or 0
-            local gap = 1
-            local nameShift = math.max(0, math.ceil(guildHeight) + gap - offY)
-            ApplyNameWrapperShift(frame, db, st, nameShift)
-            anchorRegion = ResolveNameAnchor(frame)
-            if anchorRegion then
-                anchorMode = "NAME"
-            else
-                anchorRegion = ResolveHealthBarAnchor(frame)
-                anchorMode = "BAR"
-            end
+            anchorRegion = nameAnchor
+            anchorMode = "NAME"
         else
-            RestoreNameWrapperShift(frame, db, st)
             anchorRegion = ResolveHealthBarAnchor(frame)
             anchorMode = "BAR"
         end
     else
-        RestoreNameWrapperShift(frame, db, st)
         anchorRegion = ResolveHealthBarAnchor(frame)
         anchorMode = "BAR"
     end
@@ -298,6 +349,8 @@ local function UpdateGuildText(frame, unit, db, gdb)
 end
 
 NS.Modules.GuildText = {
+    GetNameShift = GetNameShift,
+    CalculateNameShift = CalculateNameShiftFromText,
     Init = function(frame)
         if not frame or frame:IsForbidden() then return end
         local st = GetState(frame)
@@ -308,7 +361,6 @@ NS.Modules.GuildText = {
     end,
     Reset = function(frame)
         local st = GetState(frame)
-        ClearNameAnchorCache(st)
         if st.fs then st.fs:Hide() end
         if st.wrapper then st.wrapper:Hide() end
         st.lastVisible = false

@@ -697,12 +697,34 @@ local function ApplyLevelStyle(db, gdb, sample)
 end
 
 
-local function GetGuildNameShift(db, sample)
+local function GetGuildTargetScalePreview(db, gdb)
+    if PreviewIsTarget and db and not db.guildTextDisableTargetScale then
+        return tonumber(gdb and gdb.nameplateSelectedScale) or 1.2
+    end
+    return 1
+end
+
+local function GetGuildNameShift(db, gdb, sample)
     if not db or not db.guildTextEnable then return 0 end
     if not sample or not sample.isPlayer or not sample.guildName then return 0 end
+
+    local text = FormatGuildText(sample.guildName)
+    local targetScale = GetGuildTargetScalePreview(db, gdb)
+    local guildTextModule = NS.Modules and NS.Modules.GuildText
+    if guildTextModule and guildTextModule.CalculateNameShift then
+        local ok, shift = pcall(guildTextModule.CalculateNameShift, text, db, gdb, targetScale)
+        if ok and shift then
+            shift = tonumber(shift) or 0
+            if shift > 0 then
+                return shift
+            end
+            return 0
+        end
+    end
+
     if (db.guildTextMode or "UNDER_NAME") ~= "UNDER_NAME" then return 0 end
 
-    local fontSize = db.guildTextFontSize or 7
+    local fontSize = (db.guildTextFontSize or 7) * targetScale
     local offY = db.guildTextY or 0
     local gap = 1
     return math.max(0, math.ceil(fontSize) + gap - offY)
@@ -719,12 +741,13 @@ local function ApplyGuildStyle(db, gdb, sample)
     end
 
     local fontPath = NS.GetFontPath(gdb and gdb.globalFont)
-    local fontSize = db.guildTextFontSize or 7
+    local targetScale = GetGuildTargetScalePreview(db, gdb)
+    local fontSize = (db.guildTextFontSize or 7) * targetScale
     local style = db.guildTextOutline or "SHADOW"
     ApplyPreviewFont(fs, fontPath, fontSize, style)
 
     fs:SetText(text)
-    fs:SetWidth(db.guildTextWidth or 135)
+    fs:SetWidth((db.guildTextWidth or 135) * targetScale)
     fs:SetJustifyV("TOP")
 
     local align = db.guildTextAlign or "CENTER"
@@ -1369,7 +1392,7 @@ function NS.PreviewNameplate.Refresh()
     if not db or not gdb then return end
 
     local sample = GetSampleData(CurrentContext)
-    local guildShift = GetGuildNameShift(db, sample)
+    local guildShift = GetGuildNameShift(db, gdb, sample)
 
     ApplyHealthStyle(db, sample)
     ApplyCastBarStyle(db, gdb, sample)

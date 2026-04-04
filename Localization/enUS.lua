@@ -95,7 +95,7 @@ NS.AddLocale("enUS", {
     ["Gradient"] = "Gradient",
     ["Guild text"] = "Guild text",
     ["Anchor"] = "Anchor",
-    ["Under Name"] = "Under Name",
+    ["Under Name"] = "Under Name (Dynamic)",
     ["Below Health Bar"] = "Below Health Bar",
     ["Health bar"] = "Health bar",
     ["Health bar color"] = "Health bar color",
