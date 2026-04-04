@@ -11,6 +11,7 @@ function NS.AddActivePlate(unit)
 
         frame.BPF_CoreCache = nil
         frame.BPF_InstanceHidden = nil
+        frame.BPF_LastConnectedState = nil
 
         NS.ActiveNamePlates[unit] = frame
     end
@@ -21,6 +22,9 @@ function NS.RemoveActivePlate(unit)
     if frame and NS.ModuleManager and NS.ModuleManager.ResetFrame then
         -- очищаем модульные “следы” при реюзе неймплейтов
         NS.ModuleManager.ResetFrame(frame)
+    end
+    if frame then
+        frame.BPF_LastConnectedState = nil
     end
     NS.ActiveNamePlates[unit] = nil
 end

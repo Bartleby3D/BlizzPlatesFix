@@ -36,6 +36,7 @@ NS.REASON_CVAR   = NS.REASON_CVAR   or 256
 NS.REASON_RANGE  = NS.REASON_RANGE  or 512
 NS.REASON_QUEST  = NS.REASON_QUEST  or 1024
 NS.REASON_POWER  = NS.REASON_POWER  or 2048
+NS.REASON_CONNECTION = NS.REASON_CONNECTION or 8192
 NS.REASON_ALL    = NS.REASON_ALL    or -1
 
 -- (debug) последняя причина обновления по юниту
@@ -321,6 +322,27 @@ local function Fast_MouseoverGlow()
     NS.Engine.SafeCall(NS.UpdateMouseoverGlow)
 end
 
+local function Fast_ConnectionPoll()
+    if not NS.ActiveNamePlates then return end
+
+    for unit, frame in pairs(NS.ActiveNamePlates) do
+        if frame and not frame:IsForbidden() and type(unit) == "string" and unit:find("nameplate", 1, true) then
+            if UnitIsPlayer(unit) then
+                local connected = UnitIsConnected(unit) and true or false
+                local last = frame.BPF_LastConnectedState
+
+                if last == nil then
+                    frame.BPF_LastConnectedState = connected
+                elseif last ~= connected then
+                    frame.BPF_LastConnectedState = connected
+                    NS.Engine.RequestUpdate(unit, "connection_poll", true, NS.REASON_CONNECTION or 8192)
+                end
+            else
+                frame.BPF_LastConnectedState = nil
+            end
+        end
+    end
+end
 
 local function Fast_TransparencyRange()
     -- Обновляем прозрачность по дистанции периодически.
@@ -341,6 +363,7 @@ end
 
 -- Регистрируем задачи по умолчанию
 NS.Engine.RegisterFastTask("mouseover_glow",          0.15, Fast_MouseoverGlow)
+NS.Engine.RegisterFastTask("connection_poll",         1.00, Fast_ConnectionPoll)
 NS.Engine.RegisterFastTask("transparency_range",     0.20, Fast_TransparencyRange)
 
 -- =============================================================

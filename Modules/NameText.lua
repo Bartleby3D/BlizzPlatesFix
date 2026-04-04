@@ -200,7 +200,7 @@ local function ApplyStyle(frame, st, unit, db, gdb)
     -- Вычисление базовых переменных
     local targetScale = 1
     if UnitIsUnit(unit, "target") and not db.nameDisableTargetScale then
-        targetScale = 1.2
+        targetScale = tonumber(gdb and gdb.nameplateSelectedScale) or 1.2
     end
 
     local baseFontSize = db.fontScale or 12

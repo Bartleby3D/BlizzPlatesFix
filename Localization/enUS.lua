@@ -259,7 +259,7 @@ NS.AddLocale("enUS", {
     ["Class color"] = "Class color",
 
     ["Mine"] = "Mine",
-    ["My raid"] = "My raid",
+    ["My raid"] = "Mine and raid",
     ["Raid"] = "Raid",
     ["Raid in combat"] = "Raid in combat",
     ["Defensive"] = "Defensive",
@@ -268,10 +268,12 @@ NS.AddLocale("enUS", {
     ["Dispellable"] = "Dispellable",
     ["Raid and dispellable"] = "Raid and dispellable",
     ["Raid or dispellable"] = "Raid or dispellable",
+    ["Important and dispellable"] = "Important and dispellable",
+    ["Important or dispellable"] = "Important or dispellable",
     ["Important"] = "Important",
     ["Purgeable"] = "Purgeable",
     ["Important and purgeable"] = "Important and purgeable",
     ["Important or purgeable"] = "Important or purgeable",
-    ["My important"] = "My important",
+    ["My important"] = "Mine and important",
 
 })

@@ -639,7 +639,7 @@ local function AuraPassesFilter(unit, auraInstanceID, filter)
     return not C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, auraInstanceID, filter)
 end
 
-local function BuildEnemyImportantSet(frame, unit, auraType)
+local function BuildImportantSet(frame, unit, auraType)
     if auraType == "BUFF" then
         return BuildBlizzardNameplateAuraSet(frame, "BUFF")
             or BuildNameplateOnlyAuraSet(unit, "HELPFUL|INCLUDE_NAME_PLATE_ONLY")
@@ -650,18 +650,21 @@ local function BuildEnemyImportantSet(frame, unit, auraType)
     return nil
 end
 
-local function IsEnemyImportant(auraInstanceID, importantSet)
+local function IsImportantAura(auraInstanceID, importantSet)
     return importantSet and auraInstanceID and importantSet[auraInstanceID] or false
 end
 
-local function EvaluateFriendlyBuffMode(unit, aura, mode)
+local function EvaluateFriendlyBuffMode(unit, aura, mode, importantSet)
     local auraInstanceID = aura and aura.auraInstanceID
     if mode == "MINE" then
         return AuraPassesFilter(unit, auraInstanceID, "HELPFUL|PLAYER")
     elseif mode == "MINE_IMPORTANT" then
         return AuraPassesFilter(unit, auraInstanceID, "HELPFUL|PLAYER")
+            and IsImportantAura(auraInstanceID, importantSet)
+    elseif mode == "MINE_RAID" then
+        return AuraPassesFilter(unit, auraInstanceID, "HELPFUL|PLAYER")
             and AuraPassesFilter(unit, auraInstanceID, "HELPFUL|RAID")
-    elseif mode == "IMPORTANT" then
+    elseif mode == "RAID" then
         return AuraPassesFilter(unit, auraInstanceID, "HELPFUL|RAID")
     elseif mode == "RAID_IN_COMBAT" then
         return AuraPassesFilter(unit, auraInstanceID, "HELPFUL|RAID_IN_COMBAT")
@@ -676,18 +679,26 @@ local function EvaluateFriendlyBuffMode(unit, aura, mode)
     return true
 end
 
-local function EvaluateFriendlyDebuffMode(unit, aura, mode)
+local function EvaluateFriendlyDebuffMode(unit, aura, mode, importantSet)
     local auraInstanceID = aura and aura.auraInstanceID
     if mode == "DISPEL" then
         return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE")
     elseif mode == "IMPORTANT" then
+        return IsImportantAura(auraInstanceID, importantSet)
+    elseif mode == "RAID" then
         return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID")
     elseif mode == "RAID_IN_COMBAT" then
         return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID_IN_COMBAT")
     elseif mode == "IMPORTANT_AND_DISPEL" then
-        return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID")
+        return IsImportantAura(auraInstanceID, importantSet)
             and AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE")
     elseif mode == "IMPORTANT_OR_DISPEL" then
+        return IsImportantAura(auraInstanceID, importantSet)
+            or AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE")
+    elseif mode == "RAID_AND_DISPEL" then
+        return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID")
+            and AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE")
+    elseif mode == "RAID_OR_DISPEL" then
         return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID")
             or AuraPassesFilter(unit, auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE")
     end
@@ -754,14 +765,14 @@ local function EvaluateEnemyBuffMode(unit, aura, mode, importantSet)
     if mode == "PURGE" then
         return IsEnemyBuffPurgeable(aura)
     elseif mode == "IMPORTANT" then
-        return IsEnemyImportant(aura and aura.auraInstanceID, importantSet)
+        return IsImportantAura(aura and aura.auraInstanceID, importantSet)
     elseif mode == "IMPORTANT_AND_PURGE" then
         local purgeable = IsEnemyBuffPurgeable(aura)
-        local important = IsEnemyImportant(aura and aura.auraInstanceID, importantSet)
+        local important = IsImportantAura(aura and aura.auraInstanceID, importantSet)
         return important and purgeable
     elseif mode == "IMPORTANT_OR_PURGE" then
         local purgeable = IsEnemyBuffPurgeable(aura)
-        local important = IsEnemyImportant(aura and aura.auraInstanceID, importantSet)
+        local important = IsImportantAura(aura and aura.auraInstanceID, importantSet)
         return important or purgeable
     elseif mode == "BIG_DEFENSIVE" then
         return AuraPassesFilter(unit, aura and aura.auraInstanceID, "HELPFUL|BIG_DEFENSIVE")
@@ -780,9 +791,9 @@ local function EvaluateEnemyDebuffMode(unit, aura, mode, importantSet)
         return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|PLAYER")
     elseif mode == "MINE_AND_IMPORTANT" then
         return AuraPassesFilter(unit, auraInstanceID, "HARMFUL|PLAYER")
-            and IsEnemyImportant(auraInstanceID, importantSet)
+            and IsImportantAura(auraInstanceID, importantSet)
     elseif mode == "IMPORTANT" then
-        return IsEnemyImportant(auraInstanceID, importantSet)
+        return IsImportantAura(auraInstanceID, importantSet)
     end
     return true
 end
@@ -862,11 +873,17 @@ local function ProcessAuraCategory(frame, unit, db, gdb, auraType, ignoreMap)
     local maxAuras = 8
 
     local importantSet
-    if not isFriend then
-        if auraType == "BUFF" and (enemyBuffMode == "IMPORTANT" or enemyBuffMode == "IMPORTANT_AND_PURGE" or enemyBuffMode == "IMPORTANT_OR_PURGE") then
-            importantSet = BuildEnemyImportantSet(frame, unit, "BUFF")
-        elseif auraType == "DEBUFF" and (enemyDebuffMode == "IMPORTANT" or enemyDebuffMode == "MINE_AND_IMPORTANT") then
-            importantSet = BuildEnemyImportantSet(frame, unit, "DEBUFF")
+    if auraType == "BUFF" then
+        local needFriendlyImportant = isFriend and (friendlyBuffMode == "MINE_IMPORTANT")
+        local needEnemyImportant = (not isFriend) and (enemyBuffMode == "IMPORTANT" or enemyBuffMode == "IMPORTANT_AND_PURGE" or enemyBuffMode == "IMPORTANT_OR_PURGE")
+        if needFriendlyImportant or needEnemyImportant then
+            importantSet = BuildImportantSet(frame, unit, "BUFF")
+        end
+    elseif auraType == "DEBUFF" then
+        local needFriendlyImportant = isFriend and (friendlyDebuffMode == "IMPORTANT" or friendlyDebuffMode == "IMPORTANT_AND_DISPEL" or friendlyDebuffMode == "IMPORTANT_OR_DISPEL")
+        local needEnemyImportant = (not isFriend) and (enemyDebuffMode == "IMPORTANT" or enemyDebuffMode == "MINE_AND_IMPORTANT")
+        if needFriendlyImportant or needEnemyImportant then
+            importantSet = BuildImportantSet(frame, unit, "DEBUFF")
         end
     end
 
@@ -912,13 +929,13 @@ local function ProcessAuraCategory(frame, unit, db, gdb, auraType, ignoreMap)
             if show then
                 if auraType == "BUFF" then
                     if isFriend then
-                        show = EvaluateFriendlyBuffMode(unit, aura, friendlyBuffMode)
+                        show = EvaluateFriendlyBuffMode(unit, aura, friendlyBuffMode, importantSet)
                     else
                         show = EvaluateEnemyBuffMode(unit, aura, enemyBuffMode, importantSet)
                     end
                 elseif auraType == "DEBUFF" then
                     if isFriend then
-                        show = EvaluateFriendlyDebuffMode(unit, aura, friendlyDebuffMode)
+                        show = EvaluateFriendlyDebuffMode(unit, aura, friendlyDebuffMode, importantSet)
                     else
                         show = EvaluateEnemyDebuffMode(unit, aura, enemyDebuffMode, importantSet)
                     end

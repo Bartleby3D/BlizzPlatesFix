@@ -4,6 +4,7 @@ NS.UnitColor = NS.UnitColor or {}
 local M = NS.UnitColor
 
 local TAP_DENIED_R, TAP_DENIED_G, TAP_DENIED_B = 0.5, 0.5, 0.5
+local DISCONNECTED_R, DISCONNECTED_G, DISCONNECTED_B = 0.5, 0.5, 0.5
 local DEFAULT_THREAT_R, DEFAULT_THREAT_G, DEFAULT_THREAT_B = 1, 0.1, 0.1
 
 local function IsDisplayPlayer(unit)
@@ -59,6 +60,15 @@ function M.GetTapDeniedColor(unit)
     return nil
 end
 
+function M.GetDisconnectedColor(unit)
+    if not unit or not UnitIsConnected then return nil end
+    if not UnitIsPlayer(unit) then return nil end
+    if UnitIsConnected(unit) == false then
+        return DISCONNECTED_R, DISCONNECTED_G, DISCONNECTED_B
+    end
+    return nil
+end
+
 function M.GetThreatOverrideColor(unit, gdb)
     if not unit or not gdb then return nil end
     if UnitIsFriend("player", unit) then return nil end
@@ -101,7 +111,12 @@ function M.GetBaseColor(unit, db, modeKey, colorKey, hostileKey, friendlyKey, ne
 end
 
 function M.GetColor(unit, db, gdb, modeKey, colorKey, hostileKey, friendlyKey, neutralKey, fallbackR, fallbackG, fallbackB)
-    local r, g, b = M.GetTapDeniedColor(unit)
+    local r, g, b = M.GetDisconnectedColor(unit)
+    if r ~= nil then
+        return r, g, b
+    end
+
+    r, g, b = M.GetTapDeniedColor(unit)
     if r ~= nil then
         return r, g, b
     end

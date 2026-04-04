@@ -434,8 +434,9 @@ function NS.Options.GetTable(mainIdx, subIdx)
             local buffFilterFriendly = {
                 { text = NS.L("All"), value = "ALL" },
                 { text = NS.L("Mine"), value = "MINE" },
-                { text = NS.L("My raid"), value = "MINE_IMPORTANT" },
-                { text = NS.L("Raid"), value = "IMPORTANT" },
+                { text = NS.L("My important"), value = "MINE_IMPORTANT" },
+                { text = NS.L("My raid"), value = "MINE_RAID" },
+                { text = NS.L("Raid"), value = "RAID" },
                 { text = NS.L("Raid in combat"), value = "RAID_IN_COMBAT" },
                 { text = NS.L("Defensive"), value = "BIG_DEFENSIVE" },
                 { text = NS.L("External defensive"), value = "EXTERNAL_DEFENSIVE" },
@@ -526,10 +527,13 @@ function NS.Options.GetTable(mainIdx, subIdx)
             local debuffFilterFriendly = {
                 { text = NS.L("All"), value = "ALL" },
                 { text = NS.L("Dispellable"), value = "DISPEL" },
-                { text = NS.L("Raid"), value = "IMPORTANT" },
+                { text = NS.L("Important"), value = "IMPORTANT" },
+                { text = NS.L("Raid"), value = "RAID" },
                 { text = NS.L("Raid in combat"), value = "RAID_IN_COMBAT" },
-                { text = NS.L("Raid and dispellable"), value = "IMPORTANT_AND_DISPEL" },
-                { text = NS.L("Raid or dispellable"), value = "IMPORTANT_OR_DISPEL" },
+                { text = NS.L("Important and dispellable"), value = "IMPORTANT_AND_DISPEL" },
+                { text = NS.L("Important or dispellable"), value = "IMPORTANT_OR_DISPEL" },
+                { text = NS.L("Raid and dispellable"), value = "RAID_AND_DISPEL" },
+                { text = NS.L("Raid or dispellable"), value = "RAID_OR_DISPEL" },
             }
             local debuffFilterEnemy = {
                 { text = NS.L("All"), value = "ALL" },

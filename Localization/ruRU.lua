@@ -268,6 +268,8 @@ NS.AddLocale("ruRU", {
     ["Dispellable"] = "Рассеиваемые",
     ["Raid and dispellable"] = "Рейдовые и рассеиваемые",
     ["Raid or dispellable"] = "Рейдовые или рассеиваемые",
+    ["Important and dispellable"] = "Важные и рассеиваемые",
+    ["Important or dispellable"] = "Важные или рассеиваемые",
     ["Important"] = "Важные",
     ["Purgeable"] = "Снимаемые",
     ["Important and purgeable"] = "Важные и снимаемые",

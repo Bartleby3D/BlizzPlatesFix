@@ -258,9 +258,9 @@ NS.DB.unitDefaults = {
     -- Враги: подсветка баффов, которые можно снять/украсть (Purge/Spellsteal и аналоги)
     buffsPurgeGlow = false,
     -- Aura filters (single choice).
-    -- Friendly IMPORTANT modes use Blizzard RAID filters. Enemy IMPORTANT modes use Blizzard nameplate-important sets.
-    buffsFriendlyFilterMode = "ALL", -- ALL|MINE|MINE_IMPORTANT|IMPORTANT|RAID_IN_COMBAT|BIG_DEFENSIVE|EXTERNAL_DEFENSIVE|BIG_OR_EXTERNAL_DEFENSIVE
-    debuffsFriendlyFilterMode = "ALL", -- ALL|DISPEL|IMPORTANT|RAID_IN_COMBAT|IMPORTANT_AND_DISPEL|IMPORTANT_OR_DISPEL
+    -- Friendly RAID modes use Blizzard RAID filters. Friendly/Enemy IMPORTANT modes use Blizzard nameplate-important sets.
+    buffsFriendlyFilterMode = "ALL", -- ALL|MINE|MINE_IMPORTANT|MINE_RAID|RAID|RAID_IN_COMBAT|BIG_DEFENSIVE|EXTERNAL_DEFENSIVE|BIG_OR_EXTERNAL_DEFENSIVE
+    debuffsFriendlyFilterMode = "ALL", -- ALL|DISPEL|IMPORTANT|RAID|RAID_IN_COMBAT|IMPORTANT_AND_DISPEL|IMPORTANT_OR_DISPEL|RAID_AND_DISPEL|RAID_OR_DISPEL
     buffsEnemyFilterMode = "ALL", -- ALL|IMPORTANT|PURGE|IMPORTANT_AND_PURGE|IMPORTANT_OR_PURGE|BIG_DEFENSIVE|EXTERNAL_DEFENSIVE|BIG_OR_EXTERNAL_DEFENSIVE
     debuffsEnemyFilterMode = "ALL", -- ALL|IMPORTANT|MINE|MINE_AND_IMPORTANT
 
@@ -316,65 +316,36 @@ end
 function NS.DB.NormalizeAuraFilterSettings(unitType, unitDB)
     if type(unitDB) ~= "table" then return end
 
-    local buffsFriendlyMap = {
-        ONLY_MINE = "MINE",
-        ONLY_MINE_IMPORTANT = "MINE_IMPORTANT",
-        ONLY_RAID = "IMPORTANT",
-        ONLY_IMPORTANT = "RAID_IN_COMBAT",
-        ONLY_DEFENSIVE = "BIG_DEFENSIVE",
-        ONLY_EXTERNAL_DEFENSIVE = "EXTERNAL_DEFENSIVE",
-    }
-    local debuffsFriendlyMap = {
-        ONLY_DISPEL = "DISPEL",
-        ONLY_RAID = "IMPORTANT",
-        ONLY_IMPORTANT = "RAID_IN_COMBAT",
-        ONLY_IMPORTANT_OR_DISPEL = "IMPORTANT_OR_DISPEL",
-    }
-    local buffsEnemyMap = {
-        ONLY_IMPORTANT = "IMPORTANT",
-        ONLY_PURGEABLE = "PURGE",
-        ONLY_IMPORTANT_OR_PURGEABLE = "IMPORTANT_OR_PURGE",
-        ONLY_DEFENSIVE = "BIG_DEFENSIVE",
-        ONLY_EXTERNAL_DEFENSIVE = "EXTERNAL_DEFENSIVE",
-    }
-    local debuffsEnemyMap = {
-        ONLY_IMPORTANT = "IMPORTANT",
-        ONLY_MINE = "MINE",
-        ONLY_MINE_BLIZZARD_IMPORTANT = "MINE_AND_IMPORTANT",
-    }
-
-    local function normalizeKey(key, valid, map)
+    local function normalizeKey(key, valid)
         local value = unitDB[key]
         if value == nil then return end
-        if map and map[value] then
-            value = map[value]
-            unitDB[key] = value
-        end
         if not valid[value] then
             unitDB[key] = CopyValue(NS.DB.unitDefaults[key])
         end
     end
 
     normalizeKey("buffsFriendlyFilterMode", {
-        ALL = true, MINE = true, MINE_IMPORTANT = true, IMPORTANT = true,
-        RAID_IN_COMBAT = true, BIG_DEFENSIVE = true, EXTERNAL_DEFENSIVE = true,
-        BIG_OR_EXTERNAL_DEFENSIVE = true,
-    }, buffsFriendlyMap)
+        ALL = true, MINE = true, MINE_IMPORTANT = true, MINE_RAID = true,
+        RAID = true, RAID_IN_COMBAT = true, BIG_DEFENSIVE = true,
+        EXTERNAL_DEFENSIVE = true, BIG_OR_EXTERNAL_DEFENSIVE = true,
+    })
 
     normalizeKey("debuffsFriendlyFilterMode", {
-        ALL = true, DISPEL = true, IMPORTANT = true, RAID_IN_COMBAT = true,
-        IMPORTANT_AND_DISPEL = true, IMPORTANT_OR_DISPEL = true,
-    }, debuffsFriendlyMap)
+        ALL = true, DISPEL = true, IMPORTANT = true, RAID = true,
+        RAID_IN_COMBAT = true, IMPORTANT_AND_DISPEL = true,
+        IMPORTANT_OR_DISPEL = true, RAID_AND_DISPEL = true,
+        RAID_OR_DISPEL = true,
+    })
 
     normalizeKey("buffsEnemyFilterMode", {
         ALL = true, IMPORTANT = true, PURGE = true, IMPORTANT_AND_PURGE = true,
         IMPORTANT_OR_PURGE = true, BIG_DEFENSIVE = true, EXTERNAL_DEFENSIVE = true,
         BIG_OR_EXTERNAL_DEFENSIVE = true,
-    }, buffsEnemyMap)
+    })
 
     normalizeKey("debuffsEnemyFilterMode", {
         ALL = true, IMPORTANT = true, MINE = true, MINE_AND_IMPORTANT = true,
-    }, debuffsEnemyMap)
+    })
 
     if unitDB.ccOnlyMine == nil then
         unitDB.ccOnlyMine = CopyValue(NS.DB.unitDefaults.ccOnlyMine)
@@ -529,35 +500,58 @@ NS.DB.CopySectionRules = {
 }
 
 -- Динамические исключения для аур: чтобы при копировании между Friendly/Enemy
--- не перетирать настройки, которые актуальны только для одной стороны.
-local function BuildDynIgnore(sectionKey, toType)
+-- не перетирать настройки и фильтры, которые актуальны только для одной стороны.
+local function BuildDynIgnore(sectionKey, fromType, toType)
+    local fromFriendly = IsFriendlyUnitType(fromType)
+    local toFriendly = IsFriendlyUnitType(toType)
+    local crossSide = (fromFriendly ~= toFriendly)
+
     if sectionKey == "BUFFS" then
         local dynIgnore = { buffsPreview = true } -- настройки превью не копируем
-        if (toType == NS.UNIT_TYPES.ENEMY_PLAYER) or (toType == NS.UNIT_TYPES.ENEMY_NPC) then
-            -- копируем BUFFS в ENEMY: не трогаем friendly-mode
+
+        if crossSide then
+            -- Между FRIENDLY/ENEMY не копируем никакие buff filter modes
+            -- и enemy-only опции, чтобы не затирать релевантные настройки назначения.
             dynIgnore.buffsFriendlyFilterMode = true
-        else
-            -- копируем BUFFS в FRIENDLY: не трогаем enemy-mode и enemy-only опции
             dynIgnore.buffsEnemyFilterMode = true
             dynIgnore.buffsPurgeGlow = true
+        elseif toFriendly then
+            -- FRIENDLY -> FRIENDLY: копируем только friendly-mode.
+            dynIgnore.buffsEnemyFilterMode = true
+            dynIgnore.buffsPurgeGlow = true
+        else
+            -- ENEMY -> ENEMY: копируем только enemy-mode.
+            dynIgnore.buffsFriendlyFilterMode = true
         end
+
         return dynIgnore
     elseif sectionKey == "DEBUFFS" then
         local dynIgnore = { debuffsPreview = true } -- настройки превью не копируем
-        if (toType == NS.UNIT_TYPES.ENEMY_PLAYER) or (toType == NS.UNIT_TYPES.ENEMY_NPC) then
-            -- копируем DEBUFFS в ENEMY: не трогаем friendly-mode и friendly-only опции
+
+        if crossSide then
+            -- Между FRIENDLY/ENEMY не копируем никакие debuff filter modes
+            -- и side-only опции, чтобы не затирать релевантные настройки назначения.
+            dynIgnore.debuffsFriendlyFilterMode = true
+            dynIgnore.debuffsEnemyFilterMode = true
+            dynIgnore.debuffsDispelGlow = true
+        elseif toFriendly then
+            -- FRIENDLY -> FRIENDLY: копируем только friendly-mode.
+            dynIgnore.debuffsEnemyFilterMode = true
+        else
+            -- ENEMY -> ENEMY: копируем только enemy-mode.
             dynIgnore.debuffsFriendlyFilterMode = true
             dynIgnore.debuffsDispelGlow = true
-        else
-            -- копируем DEBUFFS в FRIENDLY: не трогаем enemy-mode
-            dynIgnore.debuffsEnemyFilterMode = true
         end
+
         return dynIgnore
     elseif sectionKey == "CC" then
         local dynIgnore = { ccPreview = true } -- настройки превью не копируем
-        if IsFriendlyUnitType(toType) then
+
+        -- ccOnlyMine релевантен только для ENEMY и не должен приходить из FRIENDLY.
+        if crossSide or toFriendly then
             dynIgnore.ccOnlyMine = true
         end
+
         return dynIgnore
     end
 
@@ -576,7 +570,7 @@ function NS.DB.CopySection(fromType, toType, sectionKey)
     local rule = NS.DB.CopySectionRules and NS.DB.CopySectionRules[sectionKey]
     if not rule then return false, "bad_section" end
 
-    local dynIgnore = BuildDynIgnore(sectionKey, toType)
+    local dynIgnore = BuildDynIgnore(sectionKey, fromType, toType)
 
     if rule.mode == "keys" and rule.keys then
         for _, k in ipairs(rule.keys) do
@@ -625,7 +619,7 @@ function NS.DB.CopySections(fromType, toType, sectionKeys)
     for _, sectionKey in ipairs(sectionKeys) do
         local rule = NS.DB.CopySectionRules and NS.DB.CopySectionRules[sectionKey]
         if rule then
-            local dynIgnore = BuildDynIgnore(sectionKey, toType)
+            local dynIgnore = BuildDynIgnore(sectionKey, fromType, toType)
 
             if rule.mode == "keys" and rule.keys then
                 for _, k in ipairs(rule.keys) do

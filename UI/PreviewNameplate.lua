@@ -880,7 +880,7 @@ local function ApplyNameStyle(db, gdb, sample, extraShiftY)
     local fontPath = NS.GetFontPath(gdb and gdb.globalFont)
     local targetScale = 1
     if PreviewIsTarget and not db.nameDisableTargetScale then
-        targetScale = 1.2
+        targetScale = tonumber(gdb and gdb.nameplateSelectedScale) or 1.2
     end
 
     local fontSize = (db.fontScale or 8) * targetScale
