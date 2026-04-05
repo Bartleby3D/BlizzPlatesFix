@@ -195,9 +195,11 @@ NS.AddLocale("ruRU", {
     ["Symbol color"] = "Цвет символов",
     ["Symbol selection"] = "Выбор символа",
     ["System |cffff0000(CVars)|r"] = "Системные |cffff0000(CVars)|r",
-    ["Target highlight border"] = "Рамка выделеной цели",
+    ["Target border"] = "Рамка цели",
     ["Take target"] = "Взять в цель",
     ["Target indicator"] = "Индикация цели",
+    ["Apply to name text"] = "Применять к тексту имени",
+    ["Target color"] = "Цвет цели",
     ["Target"] = "Target",
     ["Target scale"] = "Масштаб цели",
     ["Text color"] = "Цвет текста",
@@ -275,5 +277,6 @@ NS.AddLocale("ruRU", {
     ["Important and purgeable"] = "Важные и снимаемые",
     ["Important or purgeable"] = "Важные или снимаемые",
     ["My important"] = "Мои важные",
+    ["|cffff0000*Do not disable unless absolutely necessary!|r"] = "|cffff0000*Не выключайте без крайней необходимости!|r",
 
 })

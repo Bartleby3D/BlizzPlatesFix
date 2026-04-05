@@ -519,6 +519,20 @@ local function ResolveColorByMode(db, unitType, modeKey, customKey, hostileKey, 
     return GetSyntheticReactionColor(unitType)
 end
 
+local function ResolvePreviewTargetColor(db, allowNameColor)
+    if not db then return nil end
+    if PreviewIsTarget ~= true then return nil end
+    if db.targetIndicatorEnable == false then return nil end
+    if db.targetColorEnable ~= true then return nil end
+    if allowNameColor == false then return nil end
+
+    local c = db.targetColor
+    if c then
+        return c.r or 1, c.g or 1, c.b or 1
+    end
+    return 1, 1, 1
+end
+
 local function GetMainPreviewContext(mainTab)
     if not NS or not NS.UNIT_TYPES then return nil end
     if mainTab == 2 then return NS.UNIT_TYPES.FRIENDLY_PLAYER end
@@ -932,16 +946,19 @@ local function ApplyNameStyle(db, gdb, sample, extraShiftY)
     end
     fs:SetWidth(wrapWidth)
 
-    local r, g, b = ResolveColorByMode(
-        db,
-        CurrentContext,
-        "nameColorMode",
-        "nameColor",
-        "nameColorHostile",
-        "nameColorFriendly",
-        "nameColorNeutral",
-        sample
-    )
+    local r, g, b = ResolvePreviewTargetColor(db, db.targetNameColorEnable == true)
+    if r == nil then
+        r, g, b = ResolveColorByMode(
+            db,
+            CurrentContext,
+            "nameColorMode",
+            "nameColor",
+            "nameColorHostile",
+            "nameColorFriendly",
+            "nameColorNeutral",
+            sample
+        )
+    end
     fs:SetTextColor(r, g, b, 1)
     fs:SetText(sample.name or "")
 
@@ -1004,16 +1021,19 @@ local function ApplyHealthStyle(db, sample)
     PreviewFrame.FillTexture:SetPoint("BOTTOM", PreviewFrame.FillClipFrame, "BOTTOM", 0, 0)
     PreviewFrame.FillTexture:SetWidth(math.max(1, math.floor(fillW * SAMPLE_HEALTH_PCT + 0.5)))
 
-    local r, g, b = ResolveColorByMode(
-        db,
-        CurrentContext,
-        "healthColorMode",
-        "healthColor",
-        "healthColorHostile",
-        "healthColorFriendly",
-        "healthColorNeutral",
-        sample
-    )
+    local r, g, b = ResolvePreviewTargetColor(db, true)
+    if r == nil then
+        r, g, b = ResolveColorByMode(
+            db,
+            CurrentContext,
+            "healthColorMode",
+            "healthColor",
+            "healthColorHostile",
+            "healthColorFriendly",
+            "healthColorNeutral",
+            sample
+        )
+    end
 
     local hpBarEnabled = (db.hpBarEnable ~= false)
 

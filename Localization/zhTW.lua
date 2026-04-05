@@ -195,9 +195,11 @@ NS.AddLocale("zhTW", {
     ["Symbol color"] = "符號顏色",
     ["Symbol selection"] = "符號選擇",
     ["System |cffff0000(CVars)|r"] = "系統 |cffff0000(CVars)|r",
-    ["Target highlight border"] = "目標醒目邊框",
+    ["Target border"] = "目標邊框",
     ["Take target"] = "設為目標",
     ["Target indicator"] = "目標指示",
+    ["Apply to name text"] = "套用到名稱文字",
+    ["Target color"] = "目標顏色",
     ["Target"] = "目標",
     ["Target scale"] = "目標縮放",
     ["Text color"] = "文字顏色",
@@ -274,5 +276,7 @@ NS.AddLocale("zhTW", {
     ["Important and purgeable"] = "重要且可驅散/竊取",
     ["Important or purgeable"] = "重要或可驅散/竊取",
     ["My important"] = "我的重要效果",
+
+    ["|cffff0000*Do not disable unless absolutely necessary!|r"] = "|cffff0000*除非絕對必要，否則不要停用！|r",
 
 })

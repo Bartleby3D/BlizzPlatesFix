@@ -91,6 +91,22 @@ function M.GetThreatOverrideColor(unit, gdb)
     return DEFAULT_THREAT_R, DEFAULT_THREAT_G, DEFAULT_THREAT_B
 end
 
+function M.GetTargetOverrideColor(unit, db, allowTargetNameColor)
+    if not unit or not db then return nil end
+    if db.targetIndicatorEnable == false then return nil end
+    if db.targetColorEnable ~= true then return nil end
+    if allowTargetNameColor == false then return nil end
+    if not UnitIsUnit or not UnitExists then return nil end
+    if not UnitExists(unit) or not UnitExists("target") then return nil end
+    if not UnitIsUnit(unit, "target") then return nil end
+
+    local c = db.targetColor
+    if c then
+        return c.r or 1, c.g or 1, c.b or 1
+    end
+    return 1, 1, 1
+end
+
 function M.GetBaseColor(unit, db, modeKey, colorKey, hostileKey, friendlyKey, neutralKey, fallbackR, fallbackG, fallbackB)
     if not unit or not db then return 1, 1, 1 end
 
@@ -110,8 +126,13 @@ function M.GetBaseColor(unit, db, modeKey, colorKey, hostileKey, friendlyKey, ne
     return UnitSelectionColor(unit)
 end
 
-function M.GetColor(unit, db, gdb, modeKey, colorKey, hostileKey, friendlyKey, neutralKey, fallbackR, fallbackG, fallbackB)
+function M.GetColor(unit, db, gdb, modeKey, colorKey, hostileKey, friendlyKey, neutralKey, fallbackR, fallbackG, fallbackB, allowTargetOverride)
     local r, g, b = M.GetDisconnectedColor(unit)
+    if r ~= nil then
+        return r, g, b
+    end
+
+    r, g, b = M.GetTargetOverrideColor(unit, db, allowTargetOverride)
     if r ~= nil then
         return r, g, b
     end

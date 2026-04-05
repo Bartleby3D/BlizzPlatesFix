@@ -173,7 +173,8 @@ local function ComputeDesiredColor(unit, db, gdb)
         "healthColorHostile",
         "healthColorFriendly",
         "healthColorNeutral",
-        0.5, 0.5, 0.5
+        0.5, 0.5, 0.5,
+        true
     )
 end
 

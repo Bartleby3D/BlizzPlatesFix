@@ -195,9 +195,11 @@ NS.AddLocale("enUS", {
     ["Symbol color"] = "Symbol color",
     ["Symbol selection"] = "Symbol selection",
     ["System |cffff0000(CVars)|r"] = "System |cffff0000(CVars)|r",
-    ["Target highlight border"] = "Target highlight border",
+    ["Target border"] = "Target border",
     ["Take target"] = "Set as target",
     ["Target indicator"] = "Target indicator",
+    ["Apply to name text"] = "Apply to name text",
+    ["Target color"] = "Target color",
     ["Target"] = "Target",
     ["Target scale"] = "Target scale",
     ["Text color"] = "Text color",
@@ -275,5 +277,6 @@ NS.AddLocale("enUS", {
     ["Important and purgeable"] = "Important and purgeable",
     ["Important or purgeable"] = "Important or purgeable",
     ["My important"] = "Mine and important",
+    ["|cffff0000*Do not disable unless absolutely necessary!|r"] = "|cffff0000*Do not disable unless absolutely necessary!|r",
 
 })

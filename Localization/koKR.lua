@@ -195,9 +195,11 @@ NS.AddLocale("koKR", {
     ["Symbol color"] = "기호 색상",
     ["Symbol selection"] = "기호 선택",
     ["System |cffff0000(CVars)|r"] = "시스템 |cffff0000(CVars)|r",
-    ["Target highlight border"] = "대상 강조 테두리",
+    ["Target border"] = "대상 테두리",
     ["Take target"] = "대상으로 설정",
     ["Target indicator"] = "대상 표시",
+    ["Apply to name text"] = "이름 텍스트에 적용",
+    ["Target color"] = "대상 색상",
     ["Target"] = "대상",
     ["Target scale"] = "대상 크기",
     ["Text color"] = "텍스트 색상",
@@ -274,5 +276,7 @@ NS.AddLocale("koKR", {
     ["Important and purgeable"] = "중요 효과 및 정화 가능",
     ["Important or purgeable"] = "중요 효과 또는 정화 가능",
     ["My important"] = "내 중요 효과",
+
+    ["|cffff0000*Do not disable unless absolutely necessary!|r"] = "|cffff0000*정말 필요한 경우가 아니면 비활성화하지 마세요!|r",
 
 })

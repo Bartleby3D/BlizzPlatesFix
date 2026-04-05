@@ -104,7 +104,8 @@ local function GetUnitColor(unit, db, gdb)
         "nameColorHostile",
         "nameColorFriendly",
         "nameColorNeutral",
-        0.5, 0.5, 0.5
+        0.5, 0.5, 0.5,
+        db and db.targetNameColorEnable == true
     )
 end
 

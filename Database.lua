@@ -231,6 +231,10 @@ NS.DB.unitDefaults = {
     mouseoverGlowAlpha = 0.5,
     mouseoverGlowColor = {r = 1, g = 1, b = 1},
 
+    targetColorEnable = false,
+    targetNameColorEnable = false,
+    targetColor = {r = 1, g = 1, b = 1, a = 1},
+
     -- Кастбар
     cbEnabled = true,
     cbBarEnabled = true, -- отдельная галочка: только полоса применения
@@ -480,6 +484,7 @@ NS.DB.CopySectionRules = {
             "targetIndicatorArrowEnable", "targetIndicatorArrowAnim", "targetIndicatorArrowSize", "targetIndicatorArrowX", "targetIndicatorArrowY", "targetIndicatorArrowColor",
             "targetIndicatorSymbolEnable", "targetIndicatorSymbolIndex", "targetIndicatorSymbolOutline", "targetIndicatorSymbolSize", "targetIndicatorSymbolX", "targetIndicatorSymbolY", "targetIndicatorSymbolColor",
             "mouseoverGlowEnable", "mouseoverGlowAlpha", "mouseoverGlowColor",
+            "targetColorEnable", "targetNameColorEnable", "targetColor",
         },
     },
     CASTBAR = {

@@ -140,6 +140,14 @@ local function UpdateHpText(frame, unit, db, gdb)
 
     local st = GetState(frame)
 
+    -- Всегда скрываем стандартный Blizzard HP text, пока модуль юнита активен.
+    local targets = {hb.TextString, hb.Text, hb.LeftText, hb.RightText}
+    for _, o in ipairs(targets) do
+        if o and o:GetParent() ~= HiddenPool then
+            o:SetParent(HiddenPool)
+        end
+    end
+
     local simplifiedHidden = NS.ShouldHideModuleOnSimplified("HpText", frame, unit)
     if simplifiedHidden then
         if frame.BPF_ValueText then
@@ -329,13 +337,6 @@ local function UpdateHpText(frame, unit, db, gdb)
         end
     end
 
-    -- 6) Очистка Blizzard
-    local targets = {hb.TextString, hb.Text, hb.LeftText, hb.RightText}
-    for _, o in ipairs(targets) do
-        if o and o:GetParent() ~= HiddenPool then
-            o:SetParent(HiddenPool)
-        end
-    end
 end
 
 NS.Modules.HpText = {

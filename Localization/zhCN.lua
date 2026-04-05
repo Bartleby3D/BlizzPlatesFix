@@ -195,9 +195,11 @@ NS.AddLocale("zhCN", {
     ["Symbol color"] = "符号颜色",
     ["Symbol selection"] = "符号选择",
     ["System |cffff0000(CVars)|r"] = "系统 |cffff0000(CVars)|r",
-    ["Target highlight border"] = "目标高亮边框",
+    ["Target border"] = "目标边框",
     ["Take target"] = "设为目标",
     ["Target indicator"] = "目标指示",
+    ["Apply to name text"] = "应用到名称文本",
+    ["Target color"] = "目标颜色",
     ["Target"] = "目标",
     ["Target scale"] = "目标缩放",
     ["Text color"] = "文字颜色",
@@ -274,5 +276,7 @@ NS.AddLocale("zhCN", {
     ["Important and purgeable"] = "重要且可驱散/偷取",
     ["Important or purgeable"] = "重要或可驱散/偷取",
     ["My important"] = "我的重要效果",
+
+    ["|cffff0000*Do not disable unless absolutely necessary!|r"] = "|cffff0000*除非绝对必要，否则不要禁用！|r",
 
 })

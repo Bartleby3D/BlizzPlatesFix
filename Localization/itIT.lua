@@ -195,9 +195,11 @@ NS.AddLocale("itIT", {
     ["Symbol color"] = "Colore simboli",
     ["Symbol selection"] = "Selezione simbolo",
     ["System |cffff0000(CVars)|r"] = "Sistema |cffff0000(CVars)|r",
-    ["Target highlight border"] = "Bordo evidenziazione bersaglio",
+    ["Target border"] = "Bordo del bersaglio",
     ["Take target"] = "Imposta come bersaglio",
     ["Target indicator"] = "Indicatore bersaglio",
+    ["Apply to name text"] = "Applica al testo del nome",
+    ["Target color"] = "Colore del bersaglio",
     ["Target"] = "Bersaglio",
     ["Target scale"] = "Scala bersaglio",
     ["Text color"] = "Colore testo",
@@ -274,5 +276,7 @@ NS.AddLocale("itIT", {
     ["Important and purgeable"] = "Importanti e purgabili",
     ["Important or purgeable"] = "Importanti o purgabili",
     ["My important"] = "I miei effetti importanti",
+
+    ["|cffff0000*Do not disable unless absolutely necessary!|r"] = "|cffff0000*Non disattivare se non è assolutamente necessario!|r",
 
 })

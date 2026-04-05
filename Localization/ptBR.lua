@@ -195,9 +195,11 @@ NS.AddLocale("ptBR", {
     ["Symbol color"] = "Cor dos símbolos",
     ["Symbol selection"] = "Seleção de símbolo",
     ["System |cffff0000(CVars)|r"] = "Sistema |cffff0000(CVars)|r",
-    ["Target highlight border"] = "Borda de destaque do alvo",
+    ["Target border"] = "Borda do alvo",
     ["Take target"] = "Definir como alvo",
     ["Target indicator"] = "Indicador de alvo",
+    ["Apply to name text"] = "Aplicar ao texto do nome",
+    ["Target color"] = "Cor do alvo",
     ["Target"] = "Alvo",
     ["Target scale"] = "Escala do alvo",
     ["Text color"] = "Cor do texto",
@@ -274,5 +276,7 @@ NS.AddLocale("ptBR", {
     ["Important and purgeable"] = "Importantes e expurgáveis",
     ["Important or purgeable"] = "Importantes ou expurgáveis",
     ["My important"] = "Meus efeitos importantes",
+
+    ["|cffff0000*Do not disable unless absolutely necessary!|r"] = "|cffff0000*Não desative a menos que seja absolutamente necessário!|r",
 
 })
