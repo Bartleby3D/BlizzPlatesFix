@@ -16,6 +16,20 @@ local ImportantCVars = {
 
 local Dispatch = {}
 
+local _bit = _G.bit or _G.bit32
+local bor = _bit and _bit.bor
+if not bor then
+    bor = function(...)
+        local result = 0
+        for i = 1, select("#", ...) do
+            local value = select(i, ...) or 0
+            if value == -1 then return -1 end
+            result = result + value
+        end
+        return result
+    end
+end
+
 -- Карта событий -> reasonMask (bitmask)
 local EventMasks = {
     UNIT_AURA = NS.REASON_AURA,
@@ -24,7 +38,7 @@ local EventMasks = {
     UNIT_THREAT_LIST_UPDATE = NS.REASON_THREAT,
     UNIT_THREAT_SITUATION_UPDATE = NS.REASON_THREAT,
     UNIT_CLASSIFICATION_CHANGED = NS.REASON_CLASS,
-    UNIT_FACTION = NS.REASON_CLASS,
+    UNIT_FACTION = bor(NS.REASON_CLASS or 32, NS.REASON_PLATE or 1),
     UNIT_TARGET = NS.REASON_TARGET,
     UNIT_POWER_UPDATE = NS.REASON_POWER,
     UNIT_POWER_FREQUENT = NS.REASON_POWER,

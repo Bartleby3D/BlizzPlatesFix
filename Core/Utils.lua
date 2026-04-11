@@ -142,13 +142,23 @@ function NS.PixelSnapSetPoint(region, point, relativeTo, relativePoint, offsetX,
 end
 
 
+function NS.IsEffectivelyFriendlyUnit(unit)
+    if not unit then return false end
+
+    if UnitCanAttack and UnitCanAttack("player", unit) then
+        return false
+    end
+
+    return (UnitIsFriend and UnitIsFriend("player", unit)) and true or false
+end
+
 -- ГЛАВНАЯ НОВАЯ ФУНКЦИЯ: Определение типа конфига для юнита
 function NS.GetUnitConfig(unit)
     if not unit then return nil, nil end
-    
+
     local unitType
     if UnitIsPlayer(unit) then
-        if UnitIsFriend("player", unit) then
+        if NS.IsEffectivelyFriendlyUnit(unit) then
             unitType = NS.UNIT_TYPES.FRIENDLY_PLAYER
         else
             unitType = NS.UNIT_TYPES.ENEMY_PLAYER
@@ -172,7 +182,7 @@ function NS.GetUnitConfig(unit)
 
     local udb = NS.Config and NS.Config.GetTable and NS.Config.GetTable(unitType)
     local gdb = NS.Config and NS.Config.GetTable and NS.Config.GetTable("Global")
-    
+
     return udb, gdb
 end
 

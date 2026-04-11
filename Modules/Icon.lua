@@ -37,6 +37,12 @@ local function GetMyIcon(frame)
     return frame.BPF_ClassIcon
 end
 
+local function IsDisplayPlayerLike(unit)
+    return UnitIsPlayer(unit)
+        or (UnitTreatAsPlayerForDisplay and UnitTreatAsPlayerForDisplay(unit))
+        or (UnitPlayerControlled and UnitPlayerControlled(unit))
+end
+
 local function UpdateIcon(frame, unit, db, gdb)
     if not frame or frame:IsForbidden() then return end
     
@@ -72,6 +78,17 @@ local function UpdateIcon(frame, unit, db, gdb)
 
 
     if gdb.classifHideAllies and UnitIsFriend("player", unit) then
+        if st.lastVisible ~= false then
+            icon:Hide()
+            st.lastVisible = false
+        end
+        return
+    end
+
+    -- Иконка статуса предназначена только для NPC.
+    -- Игроки и player-controlled юниты (петы, guardians, vehicle-подобные display units)
+    -- не должны попадать под boss/rare/elite-логику.
+    if IsDisplayPlayerLike(unit) then
         if st.lastVisible ~= false then
             icon:Hide()
             st.lastVisible = false

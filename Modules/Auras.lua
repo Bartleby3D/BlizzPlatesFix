@@ -802,7 +802,7 @@ local function ProcessAuraCategory(frame, unit, db, gdb, auraType, ignoreMap)
     local st = GetState(frame)
     local pool, enabled, baseFilter, size, iconH, posX, posY, align, spacing, timerEdge, timerEnable, stacksEnable
 
-    local isFriend = UnitIsFriend("player", unit)
+    local isFriend = NS.IsEffectivelyFriendlyUnit(unit)
     local isTarget = unit and UnitExists("target") and UnitIsUnit(unit, "target")
 
     local friendlyBuffMode = db.buffsFriendlyFilterMode
@@ -1131,7 +1131,7 @@ local function RenderPreviewCategory(frame, unit, db, gdb, auraType, list)
     local activeCount = 0
     local now = GetTime()
     local isTarget = unit and UnitExists("target") and UnitIsUnit(unit, "target")
-    local isFriend = unit and UnitIsFriend("player", unit)
+    local isFriend = NS.IsEffectivelyFriendlyUnit(unit)
     spacing = spacing or 4
 
     local usePandemic

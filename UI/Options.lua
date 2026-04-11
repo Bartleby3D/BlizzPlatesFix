@@ -269,21 +269,13 @@ function NS.Options.GetTable(mainIdx, subIdx)
         if subIdx == 6 then
             Add("vline", nil, nil, nil, nil, nil, nil, nil, 1, {size=550, offX=25, offY=0})
             -- Col 1
-            Add("header", NS.L("Side symbols"), nil, nil, nil, nil, nil, nil, 1)
-            Add("checkbox", NS.L("Enable"), nil, "targetIndicatorSymbolEnable", nil, nil, nil, nil, 1)
-            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = -10})
-            
-            local symList = { 
-                { text="> <", value=1 }, { text="< >", value=2 }, { text="[ ]", value=3 }, 
-                { text="( )", value=4 }, { text="» «", value=5 }, { text="« »", value=6 } 
-            }
-            Add("dropdown", NS.L("Symbol selection"), nil, "targetIndicatorSymbolIndex", nil, nil, nil, symList, 1, {offX=20})
-            local outlines = { { text = NS.L("Disable"), value = "NONE" }, { text = NS.L("Outline"), value = "OUTLINE" }, { text = NS.L("Thick outline"), value = "THICKOUTLINE" }, { text = NS.L("Shadow"), value = "SHADOW" } }
-            Add("dropdown", NS.L("Outline"), nil, "targetIndicatorSymbolOutline", nil, nil, nil, outlines, 1, {offX=20})
-            Add("slider", NS.L("Size"), nil, "targetIndicatorSymbolSize", 8, 30, 1, nil, 1, {offX=20})
-            Add("slider", NS.L("Offset X"), nil, "targetIndicatorSymbolX", -150, 150, 1, nil, 1, {offX=20})
-            Add("slider", NS.L("Offset Y"), nil, "targetIndicatorSymbolY", -100, 100, 1, nil, 1, {offX=20})
-            Add("color", NS.L("Symbol color"), nil, "targetIndicatorSymbolColor", nil, nil, nil, nil, 1, {offX=20})
+            Add("header", NS.L("Arrow above target"), nil, nil, nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Enable"), nil, "targetIndicatorArrowEnable", nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Animation"), nil, "targetIndicatorArrowAnim", nil, nil, nil, nil, 1, {offX=20})
+            Add("slider", NS.L("Size"), nil, "targetIndicatorArrowSize", 10, 60, 1, nil, 1, {offX=20})
+            Add("slider", NS.L("Position X"), nil, "targetIndicatorArrowX", -100, 100, 1, nil, 1, {offX=20})
+            Add("slider", NS.L("Position Y"), nil, "targetIndicatorArrowY", -100, 100, 1, nil, 1, {offX=20})
+            Add("color", NS.L("Arrow color"), nil, "targetIndicatorArrowColor", nil, nil, nil, nil, 1, {offX=20})
 
             Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 10})
             Add("separator", nil, nil, nil, nil, nil, nil, nil, 1, {size=260, offY=8})
@@ -293,32 +285,41 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("checkbox", NS.L("Enable"), nil, "targetBorderEnabled", nil, nil, nil, nil, 1)
             Add("color", NS.L("Border color"), nil, "targetBorderColor", nil, nil, nil, nil, 1, {offX=20})
 
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 10})
+            Add("separator", nil, nil, nil, nil, nil, nil, nil, 1, {size=260, offY=8})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
+
+            Add("header", NS.L("Target color"), nil, nil, nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Enable"), nil, "targetColorEnable", nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Apply to name text"), nil, "targetNameColorEnable", nil, nil, nil, nil, 1, {offX=20})
+            Add("color", NS.L("Target color"), nil, "targetColor", nil, nil, nil, nil, 1, {offX=20})
+
             -- Col 2
+            Add("header", NS.L("Side symbols"), nil, nil, nil, nil, nil, nil, 2)
+            Add("checkbox", NS.L("Enable"), nil, "targetIndicatorSymbolEnable", nil, nil, nil, nil, 2)
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = -10})
+            
+            local symList = { 
+                { text="> <", value=1 }, { text="< >", value=2 }, { text="[ ]", value=3 }, 
+                { text="( )", value=4 }, { text="» «", value=5 }, { text="« »", value=6 } 
+            }
+            Add("dropdown", NS.L("Symbol selection"), nil, "targetIndicatorSymbolIndex", nil, nil, nil, symList, 2, {offX=20})
+            local outlines = { { text = NS.L("Disable"), value = "NONE" }, { text = NS.L("Outline"), value = "OUTLINE" }, { text = NS.L("Thick outline"), value = "THICKOUTLINE" }, { text = NS.L("Shadow"), value = "SHADOW" } }
+            Add("dropdown", NS.L("Outline"), nil, "targetIndicatorSymbolOutline", nil, nil, nil, outlines, 2, {offX=20})
+            Add("slider", NS.L("Size"), nil, "targetIndicatorSymbolSize", 8, 30, 1, nil, 2, {offX=20})
+            Add("slider", NS.L("Offset X"), nil, "targetIndicatorSymbolX", -150, 150, 1, nil, 2, {offX=20})
+            Add("slider", NS.L("Offset Y"), nil, "targetIndicatorSymbolY", -100, 100, 1, nil, 2, {offX=20})
+            Add("color", NS.L("Symbol color"), nil, "targetIndicatorSymbolColor", nil, nil, nil, nil, 2, {offX=20})
+
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 10})
+            Add("separator", nil, nil, nil, nil, nil, nil, nil, 2, {size=260, offY=8})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 5})
+
             Add("header", NS.L("Highlight on mouseover"), nil, nil, nil, nil, nil, nil, 2)
             Add("checkbox", NS.L("Enable"), nil, "mouseoverGlowEnable", nil, nil, nil, nil, 2)
             Add("slider", NS.L("Brightness"), nil, "mouseoverGlowAlpha", 0, 1, 0.1, nil, 2, {offX=20})
             Add("color", NS.L("Highlight color"), nil, "mouseoverGlowColor", nil, nil, nil, nil, 2, {offX=20})
 
-            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 10})
-            Add("separator", nil, nil, nil, nil, nil, nil, nil, 2, {size=260, offY=8})
-            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 5})
-
-            Add("header", NS.L("Target color"), nil, nil, nil, nil, nil, nil, 2)
-            Add("checkbox", NS.L("Enable"), nil, "targetColorEnable", nil, nil, nil, nil, 2)
-            Add("checkbox", NS.L("Apply to name text"), nil, "targetNameColorEnable", nil, nil, nil, nil, 2, {offX=20})
-            Add("color", NS.L("Target color"), nil, "targetColor", nil, nil, nil, nil, 2, {offX=20})
-
-            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 10})
-            Add("separator", nil, nil, nil, nil, nil, nil, nil, 2, {size=260, offY=8})
-            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 5})
-
-            Add("header", NS.L("Arrow above target"), nil, nil, nil, nil, nil, nil, 2)
-            Add("checkbox", NS.L("Enable"), nil, "targetIndicatorArrowEnable", nil, nil, nil, nil, 2)
-            Add("checkbox", NS.L("Animation"), nil, "targetIndicatorArrowAnim", nil, nil, nil, nil, 2, {offX=20})
-            Add("slider", NS.L("Size"), nil, "targetIndicatorArrowSize", 10, 60, 1, nil, 2, {offX=20})
-            Add("slider", NS.L("Position X"), nil, "targetIndicatorArrowX", -100, 100, 1, nil, 2, {offX=20})
-            Add("slider", NS.L("Position Y"), nil, "targetIndicatorArrowY", -100, 100, 1, nil, 2, {offX=20})
-            Add("color", NS.L("Arrow color"), nil, "targetIndicatorArrowColor", nil, nil, nil, nil, 2, {offX=20})
         end
 
         -- 6. Кастбар
