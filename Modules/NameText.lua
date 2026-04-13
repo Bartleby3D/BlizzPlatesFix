@@ -22,6 +22,7 @@ local function GetState(frame)
         lastPointAlignH = nil,
         lastPointX = nil,
         lastPointY = nil,
+        lastAnchorMode = nil,
         lastFsAnchorKey = nil,
         lastColorR = nil,
         lastColorG = nil,
@@ -105,7 +106,10 @@ local function GetUnitColor(unit, db, gdb)
         "nameColorFriendly",
         "nameColorNeutral",
         0.5, 0.5, 0.5,
-        db and db.targetNameColorEnable == true
+        db == nil or db.nameTargetColorEnable ~= false,
+        db == nil or db.nameDisconnectedColorEnable ~= false,
+        db == nil or db.nameTapDeniedColorEnable ~= false,
+        db == nil or db.nameThreatColorEnable ~= false
     )
 end
 
@@ -167,7 +171,75 @@ local function SetBlizzBlocked(frame, blocked)
 end
 
 
+local function GetNameAnchorMode(db)
+    local mode = db and db.nameAnchorMode or "ABOVE_HEALTHBAR"
+    if mode == "ABOVE_HEALTHBAR" or mode == "CENTER_HEALTHBAR" or mode == "BELOW_HEALTHBAR" then
+        return mode
+    end
+    return "ABOVE_HEALTHBAR"
+end
+
+local function GetWrapperAnchorPoints(alignH, anchorMode)
+    if anchorMode == "BELOW_HEALTHBAR" then
+        if alignH == "LEFT" then
+            return "TOPLEFT", "BOTTOMLEFT"
+        elseif alignH == "RIGHT" then
+            return "TOPRIGHT", "BOTTOMRIGHT"
+        else
+            return "TOP", "BOTTOM"
+        end
+    elseif anchorMode == "CENTER_HEALTHBAR" then
+        if alignH == "LEFT" then
+            return "LEFT", "LEFT"
+        elseif alignH == "RIGHT" then
+            return "RIGHT", "RIGHT"
+        else
+            return "CENTER", "CENTER"
+        end
+    else
+        if alignH == "LEFT" then
+            return "BOTTOMLEFT", "TOPLEFT"
+        elseif alignH == "RIGHT" then
+            return "BOTTOMRIGHT", "TOPRIGHT"
+        else
+            return "BOTTOM", "TOP"
+        end
+    end
+end
+
+local function GetFontStringAnchorPoint(alignH, anchorMode)
+    if anchorMode == "BELOW_HEALTHBAR" then
+        if alignH == "LEFT" then
+            return "TOPLEFT"
+        elseif alignH == "RIGHT" then
+            return "TOPRIGHT"
+        else
+            return "TOP"
+        end
+    elseif anchorMode == "CENTER_HEALTHBAR" then
+        if alignH == "LEFT" then
+            return "LEFT"
+        elseif alignH == "RIGHT" then
+            return "RIGHT"
+        else
+            return "CENTER"
+        end
+    else
+        if alignH == "LEFT" then
+            return "BOTTOMLEFT"
+        elseif alignH == "RIGHT" then
+            return "BOTTOMRIGHT"
+        else
+            return "BOTTOM"
+        end
+    end
+end
+
 local function GetExtraNameShift(frame, unit, db, gdb)
+    if GetNameAnchorMode(db) ~= "ABOVE_HEALTHBAR" then
+        return 0
+    end
+
     local guildTextModule = NS.Modules and NS.Modules.GuildText
     if not (guildTextModule and guildTextModule.GetNameShift) then
         return 0
@@ -199,6 +271,8 @@ local function ApplyStyle(frame, st, unit, db, gdb)
         st.lastPointAlignH = nil
         st.lastPointX = nil
         st.lastPointY = nil
+        st.lastAnchorMode = nil
+        st.lastFsAnchorKey = nil
         st.lastNameIdentity = nil
         return
     end
@@ -285,7 +359,8 @@ local function ApplyStyle(frame, st, unit, db, gdb)
 
     -- ШАГ 4: Выравнивание, позиционирование и стилизация
     local alignH = db.textAlign or "CENTER"
-    local alignV = "BOTTOM"
+    local anchorMode = GetNameAnchorMode(db)
+    local alignV = (anchorMode == "BELOW_HEALTHBAR") and "TOP" or ((anchorMode == "CENTER_HEALTHBAR") and "MIDDLE" or "BOTTOM")
     local offX = db.textX or 0
     local offY = (db.textY or 0) + GetExtraNameShift(frame, unit, db, gdb)
 
@@ -299,33 +374,25 @@ local function ApplyStyle(frame, st, unit, db, gdb)
     end
 
     local anchor = frame.healthBar
-    if st.wrapper and (st.lastPointAlignH ~= alignH or st.lastPointX ~= offX or st.lastPointY ~= offY) then
+    if st.wrapper and (st.lastPointAlignH ~= alignH or st.lastPointX ~= offX or st.lastPointY ~= offY or st.lastAnchorMode ~= anchorMode) then
+        local point, relPoint = GetWrapperAnchorPoints(alignH, anchorMode)
         st.wrapper:ClearAllPoints()
-        if alignH == "LEFT" then
-            st.wrapper:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", offX, offY)
-        elseif alignH == "RIGHT" then
-            st.wrapper:SetPoint("BOTTOMRIGHT", anchor, "TOPRIGHT", offX, offY)
-        else
-            st.wrapper:SetPoint("BOTTOM", anchor, "TOP", offX, offY)
-        end
+        st.wrapper:SetPoint(point, anchor, relPoint, offX, offY)
         st.lastPointAlignH = alignH
         st.lastPointX = offX
         st.lastPointY = offY
+        st.lastAnchorMode = anchorMode
     end
 
     frame.BPF_NameTextWrapper = st.wrapper
     frame.BPF_NameTextFS = fs
 
-    if st.wrapper and st.lastFsAnchorKey ~= alignH then
+    local fsAnchorKey = alignH .. ":" .. anchorMode
+    if st.wrapper and st.lastFsAnchorKey ~= fsAnchorKey then
+        local fsPoint = GetFontStringAnchorPoint(alignH, anchorMode)
         fs:ClearAllPoints()
-        if alignH == "LEFT" then
-            fs:SetPoint("BOTTOMLEFT", st.wrapper, "BOTTOMLEFT", 0, 0)
-        elseif alignH == "RIGHT" then
-            fs:SetPoint("BOTTOMRIGHT", st.wrapper, "BOTTOMRIGHT", 0, 0)
-        else
-            fs:SetPoint("BOTTOM", st.wrapper, "BOTTOM", 0, 0)
-        end
-        st.lastFsAnchorKey = alignH
+        fs:SetPoint(fsPoint, st.wrapper, fsPoint, 0, 0)
+        st.lastFsAnchorKey = fsAnchorKey
     end
 
     local wantShadow = (style == "SHADOW")
@@ -380,6 +447,8 @@ NS.Modules.NameText = {
         st.lastPointAlignH = nil
         st.lastPointX = nil
         st.lastPointY = nil
+        st.lastAnchorMode = nil
+        st.lastFsAnchorKey = nil
         st.lastNameIdentity = nil
     end
 }

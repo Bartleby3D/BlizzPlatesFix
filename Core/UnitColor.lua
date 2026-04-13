@@ -53,7 +53,9 @@ end
 
 function M.GetTapDeniedColor(unit)
     if not unit or not UnitIsTapDenied then return nil end
+    if UnitIsFriend("player", unit) then return nil end
     if UnitPlayerControlled(unit) then return nil end
+    if not UnitCanAttack("player", unit) then return nil end
     if UnitIsTapDenied(unit) then
         return TAP_DENIED_R, TAP_DENIED_G, TAP_DENIED_B
     end
@@ -91,11 +93,11 @@ function M.GetThreatOverrideColor(unit, gdb)
     return DEFAULT_THREAT_R, DEFAULT_THREAT_G, DEFAULT_THREAT_B
 end
 
-function M.GetTargetOverrideColor(unit, db, allowTargetNameColor)
+function M.GetTargetOverrideColor(unit, db, allowTargetOverride)
     if not unit or not db then return nil end
     if db.targetIndicatorEnable == false then return nil end
     if db.targetColorEnable ~= true then return nil end
-    if allowTargetNameColor == false then return nil end
+    if allowTargetOverride == false then return nil end
     if not UnitIsUnit or not UnitExists then return nil end
     if not UnitExists(unit) or not UnitExists("target") then return nil end
     if not UnitIsUnit(unit, "target") then return nil end
@@ -126,10 +128,14 @@ function M.GetBaseColor(unit, db, modeKey, colorKey, hostileKey, friendlyKey, ne
     return UnitSelectionColor(unit)
 end
 
-function M.GetColor(unit, db, gdb, modeKey, colorKey, hostileKey, friendlyKey, neutralKey, fallbackR, fallbackG, fallbackB, allowTargetOverride)
-    local r, g, b = M.GetDisconnectedColor(unit)
-    if r ~= nil then
-        return r, g, b
+function M.GetColor(unit, db, gdb, modeKey, colorKey, hostileKey, friendlyKey, neutralKey, fallbackR, fallbackG, fallbackB, allowTargetOverride, allowDisconnectedOverride, allowTapDeniedOverride, allowThreatOverride)
+    local r, g, b
+
+    if allowDisconnectedOverride ~= false then
+        r, g, b = M.GetDisconnectedColor(unit)
+        if r ~= nil then
+            return r, g, b
+        end
     end
 
     r, g, b = M.GetTargetOverrideColor(unit, db, allowTargetOverride)
@@ -137,14 +143,18 @@ function M.GetColor(unit, db, gdb, modeKey, colorKey, hostileKey, friendlyKey, n
         return r, g, b
     end
 
-    r, g, b = M.GetTapDeniedColor(unit)
-    if r ~= nil then
-        return r, g, b
+    if allowTapDeniedOverride ~= false then
+        r, g, b = M.GetTapDeniedColor(unit)
+        if r ~= nil then
+            return r, g, b
+        end
     end
 
-    r, g, b = M.GetThreatOverrideColor(unit, gdb)
-    if r ~= nil then
-        return r, g, b
+    if allowThreatOverride ~= false then
+        r, g, b = M.GetThreatOverrideColor(unit, gdb)
+        if r ~= nil then
+            return r, g, b
+        end
     end
 
     return M.GetBaseColor(unit, db, modeKey, colorKey, hostileKey, friendlyKey, neutralKey, fallbackR, fallbackG, fallbackB)

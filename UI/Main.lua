@@ -156,9 +156,10 @@ local function DrawOptions(container, mainIdx, subIdx)
 
             elseif opt.type == "dropdown" then
                 -- ПЕРЕДАЕМ opt.context!
-                widget = NS.Widgets.CreateDropdown(container, opt.label, opt.db, opt.options, opt.context, opt.width, opt.onChange, opt.getCurrent)
+                widget = NS.Widgets.CreateDropdown(container, opt.label, opt.db, opt.options, opt.desc, opt.context, opt.width, opt.onChange, opt.getCurrent)
                 PixelSnapSetPoint(widget, "TOPLEFT", container, "TOPLEFT", finalX, currentY)
-                currentY = currentY - 60
+                local extra = opt.desc and 15 or 0
+                currentY = currentY - 60 - extra
 
             elseif opt.type == "button" then
                 widget = NS.Widgets.CreateButton(container, opt.label or opt.text, opt.desc, opt.onClick)

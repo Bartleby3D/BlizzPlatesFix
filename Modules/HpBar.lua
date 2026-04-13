@@ -174,7 +174,10 @@ local function ComputeDesiredColor(unit, db, gdb)
         "healthColorFriendly",
         "healthColorNeutral",
         0.5, 0.5, 0.5,
-        true
+        db == nil or db.healthTargetColorEnable ~= false,
+        db == nil or db.healthDisconnectedColorEnable ~= false,
+        db == nil or db.healthTapDeniedColorEnable ~= false,
+        db == nil or db.healthThreatColorEnable ~= false
     )
 end
 

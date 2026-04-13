@@ -152,12 +152,19 @@ NS.DB.unitDefaults = {
     healthColorHostile  = {r=1, g=1, b=1}, -- Враждебный (EnemyNPC)
     healthColorFriendly = {r=1, g=1, b=1}, -- Союзник (FriendlyNPC)
 
+    -- Оверлеи цвета для полосы здоровья
+    healthTargetColorEnable = true,
+    healthDisconnectedColorEnable = true,
+    healthTapDeniedColorEnable = true,
+    healthThreatColorEnable = true,
+
     -- Имя
     nameEnable = true,
     nameDisableTargetScale = true,
     nameShowPlayerTitle = false,
     fontScale = 8,
     fontOutline = "SHADOW",
+    nameAnchorMode = "ABOVE_HEALTHBAR",
     textX = 0, textY = 5,
     textAlign = "CENTER",
     nameWordWrap = true,
@@ -170,6 +177,12 @@ NS.DB.unitDefaults = {
     nameColorNeutral  = {r=1, g=1, b=1}, -- Нейтрал (атакуемый/неатакуемый)
     nameColorHostile  = {r=1, g=1, b=1}, -- Враждебный (EnemyNPC)
     nameColorFriendly = {r=1, g=1, b=1}, -- Союзник (FriendlyNPC)
+
+    -- Оверлеи цвета для имени
+    nameTargetColorEnable = true,
+    nameDisconnectedColorEnable = true,
+    nameTapDeniedColorEnable = true,
+    nameThreatColorEnable = true,
 
     -- Friendly players: instance-only names mode (party/raid via Blizzard CVars)
     friendlyInstanceNamesEnable = false,
@@ -232,7 +245,6 @@ NS.DB.unitDefaults = {
     mouseoverGlowColor = {r = 1, g = 1, b = 1},
 
     targetColorEnable = false,
-    targetNameColorEnable = false,
     targetColor = {r = 1, g = 1, b = 1, a = 1},
 
     -- Кастбар
@@ -431,7 +443,13 @@ end
 NS.DB.CopySectionRules = {
     HPBAR = {
         mode = "keys",
-        keys = { "hpBarEnable", "plateWidth", "plateHeight" },
+        keys = {
+            "hpBarEnable", "plateWidth", "plateHeight",
+            "healthTargetColorEnable",
+            "healthDisconnectedColorEnable",
+            "healthTapDeniedColorEnable",
+            "healthThreatColorEnable",
+        },
     },
     NAME = {
         mode = "keys",
@@ -440,10 +458,15 @@ NS.DB.CopySectionRules = {
             "nameDisableTargetScale",
             "nameShowPlayerTitle",
             "fontScale", "fontOutline",
+            "nameAnchorMode",
             "textX", "textY", "textAlign",
             "nameWordWrap", "nameWrapWidth",
             "friendlyInstanceNamesEnable", "friendlyInstanceNamesClassColor",
             "friendlyInstanceNamesFontSize", "friendlyInstanceNamesFontOutline",
+            "nameTargetColorEnable",
+            "nameDisconnectedColorEnable",
+            "nameTapDeniedColorEnable",
+            "nameThreatColorEnable",
         },
     },
     GUILD = {
@@ -484,7 +507,7 @@ NS.DB.CopySectionRules = {
             "targetIndicatorArrowEnable", "targetIndicatorArrowAnim", "targetIndicatorArrowSize", "targetIndicatorArrowX", "targetIndicatorArrowY", "targetIndicatorArrowColor",
             "targetIndicatorSymbolEnable", "targetIndicatorSymbolIndex", "targetIndicatorSymbolOutline", "targetIndicatorSymbolSize", "targetIndicatorSymbolX", "targetIndicatorSymbolY", "targetIndicatorSymbolColor",
             "mouseoverGlowEnable", "mouseoverGlowAlpha", "mouseoverGlowColor",
-            "targetColorEnable", "targetNameColorEnable", "targetColor",
+            "targetColorEnable", "targetColor",
         },
     },
     CASTBAR = {
@@ -505,9 +528,64 @@ NS.DB.CopySectionRules = {
     },
 }
 
--- Динамические исключения для аур: чтобы при копировании между Friendly/Enemy
+local function IsPlayerUnitType(unitType)
+    return unitType == NS.UNIT_TYPES.FRIENDLY_PLAYER or unitType == NS.UNIT_TYPES.ENEMY_PLAYER
+end
+
+local function IsNPCUnitType(unitType)
+    return unitType == NS.UNIT_TYPES.FRIENDLY_NPC or unitType == NS.UNIT_TYPES.ENEMY_NPC
+end
+
+local function SupportsOverlay(unitType, overlay)
+    if overlay == "target" then
+        return true
+    elseif overlay == "disconnected" then
+        return IsPlayerUnitType(unitType)
+    elseif overlay == "tapDenied" then
+        return unitType == NS.UNIT_TYPES.ENEMY_NPC
+    elseif overlay == "threat" then
+        return unitType == NS.UNIT_TYPES.ENEMY_NPC
+    end
+    return false
+end
+
+local function BuildColorOverlayDynIgnore(sectionKey, fromType, toType)
+    local prefix
+    if sectionKey == "HPBAR" then
+        prefix = "health"
+    elseif sectionKey == "NAME" then
+        prefix = "name"
+    else
+        return nil
+    end
+
+    local dynIgnore = {}
+    local any = false
+    local overlayKeySuffix = {
+        target = "TargetColorEnable",
+        disconnected = "DisconnectedColorEnable",
+        tapDenied = "TapDeniedColorEnable",
+        threat = "ThreatColorEnable",
+    }
+
+    for overlay, suffix in pairs(overlayKeySuffix) do
+        if not (SupportsOverlay(fromType, overlay) and SupportsOverlay(toType, overlay)) then
+            dynIgnore[prefix .. suffix] = true
+            any = true
+        end
+    end
+
+    return any and dynIgnore or nil
+end
+
+-- Динамические исключения для аур и color overlays: чтобы при копировании между Friendly/Enemy
 -- не перетирать настройки и фильтры, которые актуальны только для одной стороны.
 local function BuildDynIgnore(sectionKey, fromType, toType)
+    local overlayIgnore = BuildColorOverlayDynIgnore(sectionKey, fromType, toType)
+    if overlayIgnore then
+        return overlayIgnore
+    end
+
     local fromFriendly = IsFriendlyUnitType(fromType)
     local toFriendly = IsFriendlyUnitType(toType)
     local crossSide = (fromFriendly ~= toFriendly)
@@ -580,7 +658,7 @@ function NS.DB.CopySection(fromType, toType, sectionKey)
 
     if rule.mode == "keys" and rule.keys then
         for _, k in ipairs(rule.keys) do
-            if source[k] ~= nil then
+            if source[k] ~= nil and not (dynIgnore and dynIgnore[k]) then
                 dest[k] = CopyValue(source[k])
             end
         end
@@ -629,7 +707,7 @@ function NS.DB.CopySections(fromType, toType, sectionKeys)
 
             if rule.mode == "keys" and rule.keys then
                 for _, k in ipairs(rule.keys) do
-                    if source[k] ~= nil then
+                    if source[k] ~= nil and not (dynIgnore and dynIgnore[k]) then
                         dest[k] = CopyValue(source[k])
                         any = true
                     end

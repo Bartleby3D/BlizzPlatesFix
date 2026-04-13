@@ -90,6 +90,19 @@ function NS.Options.GetTable(mainIdx, subIdx)
                     offX = 20, noToggleLink = true, requires = { key = "healthColorMode", value = 2 }
                 })
             end
+
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 10})
+            Add("separator", nil, nil, nil, nil, nil, nil, nil, 1, {size=260, offY=8})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 5})
+
+            Add("header", NS.L("Color overlays"), nil, nil, nil, nil, nil, nil, 1)
+            Add("checkbox", NS.L("Target"), NS.L("Uses the color from Target indicator => Target color."), "healthTargetColorEnable", nil, nil, nil, nil, 1)
+            if dbContext == NS.UNIT_TYPES.FRIENDLY_PLAYER or dbContext == NS.UNIT_TYPES.ENEMY_PLAYER then
+                Add("checkbox", NS.L("Disconnected"), NS.L("Overrides the base color when the player is offline."), "healthDisconnectedColorEnable", nil, nil, nil, nil, 1)
+            elseif dbContext == NS.UNIT_TYPES.ENEMY_NPC then
+                Add("checkbox", NS.L("Tap denied"), NS.L("Overrides the base color for units that cannot be tagged or looted."), "healthTapDeniedColorEnable", nil, nil, nil, nil, 1)
+                Add("checkbox", NS.L("Threat"), NS.L("Also affects Tank mode colors."), "healthThreatColorEnable", nil, nil, nil, nil, 1)
+            end
         end
 
         -- 2. Текст имени
@@ -104,6 +117,12 @@ function NS.Options.GetTable(mainIdx, subIdx)
             Add("slider", NS.L("Size"), nil, "fontScale", 4, 20, 0.5, nil, 1)
             Add("slider", NS.L("Offset X"), nil, "textX", -100, 100, 0.5, nil, 1)
             Add("slider", NS.L("Offset Y"), nil, "textY", -100, 100, 0.5, nil, 1)
+            local nameAnchorList = {
+                { text = NS.L("Above Health Bar"), value = "ABOVE_HEALTHBAR" },
+                { text = NS.L("Center of Health Bar"), value = "CENTER_HEALTHBAR" },
+                { text = NS.L("Below Health Bar"), value = "BELOW_HEALTHBAR" },
+            }
+            Add("dropdown", NS.L("Anchor"), nil, "nameAnchorMode", nil, nil, nil, nameAnchorList, 1)
             local alignList = { { text = NS.L("Left"), value = "LEFT" }, { text = NS.L("Center"), value = "CENTER" }, { text = NS.L("Right"), value = "RIGHT" } }
             Add("dropdown", NS.L("Alignment"), nil, "textAlign", nil, nil, nil, alignList, 1)
             local outlineList = { { text = NS.L("Disable"), value = "NONE" }, { text = NS.L("Outline"), value = "OUTLINE" }, { text = NS.L("Thick outline"), value = "THICKOUTLINE" }, { text = NS.L("Shadow"), value = "SHADOW" } }
@@ -137,6 +156,19 @@ function NS.Options.GetTable(mainIdx, subIdx)
                 Add("color", NS.L("Color: Friendly"), nil, "nameColorFriendly", nil, nil, nil, nil, 2, { offX = 20, noToggleLink = true, requires = { key = "nameColorMode", value = 2 } })
             else
                 Add("color", NS.L("Fixed color"), nil, "nameColor", nil, nil, nil, nil, 2, { offX = 20, noToggleLink = true, requires = { key = "nameColorMode", value = 2 } })
+            end
+
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 10})
+            Add("separator", nil, nil, nil, nil, nil, nil, nil, 2, {size=260, offY=8})
+            Add("spacer", nil, nil, nil, nil, nil, nil, nil, 2, {size = 5})
+
+            Add("header", NS.L("Color overlays"), nil, nil, nil, nil, nil, nil, 2)
+            Add("checkbox", NS.L("Target"), NS.L("Uses the color from Target indicator => Target color."), "nameTargetColorEnable", nil, nil, nil, nil, 2)
+            if dbContext == NS.UNIT_TYPES.FRIENDLY_PLAYER or dbContext == NS.UNIT_TYPES.ENEMY_PLAYER then
+                Add("checkbox", NS.L("Disconnected"), NS.L("Overrides the base color when the player is offline."), "nameDisconnectedColorEnable", nil, nil, nil, nil, 2)
+            elseif dbContext == NS.UNIT_TYPES.ENEMY_NPC then
+                Add("checkbox", NS.L("Tap denied"), NS.L("Overrides the base color for units that cannot be tagged or looted."), "nameTapDeniedColorEnable", nil, nil, nil, nil, 2)
+                Add("checkbox", NS.L("Threat"), NS.L("Also affects Tank mode colors."), "nameThreatColorEnable", nil, nil, nil, nil, 2)
             end
 
             if dbContext == NS.UNIT_TYPES.FRIENDLY_PLAYER then
@@ -200,7 +232,8 @@ function NS.Options.GetTable(mainIdx, subIdx)
                 Add("slider", NS.L("Size"), nil, "guildTextFontSize", 4, 20, 0.5, nil, 1)
                 Add("slider", NS.L("Offset X"), nil, "guildTextX", -100, 100, 0.5, nil, 1)
                 Add("slider", NS.L("Offset Y"), nil, "guildTextY", -100, 100, 0.5, nil, 1)
-                Add("dropdown", NS.L("Anchor"), nil, "guildTextMode", nil, nil, nil, guildModeList, 1)
+                Add("dropdown", NS.L("Anchor"), NS.L("Dynamic offset works only when Name anchor is set to Above Health Bar."), "guildTextMode", nil, nil, nil, guildModeList, 1)
+                Add("spacer", nil, nil, nil, nil, nil, nil, nil, 1, {size = 10})
                 Add("dropdown", NS.L("Alignment"), nil, "guildTextAlign", nil, nil, nil, alignList, 1)
                 Add("dropdown", NS.L("Outline"), nil, "guildTextOutline", nil, nil, nil, outlineList, 1)
                 Add("header", NS.L("Shorten text"), nil, nil, nil, nil, nil, nil, 2)
@@ -291,7 +324,6 @@ function NS.Options.GetTable(mainIdx, subIdx)
 
             Add("header", NS.L("Target color"), nil, nil, nil, nil, nil, nil, 1)
             Add("checkbox", NS.L("Enable"), nil, "targetColorEnable", nil, nil, nil, nil, 1)
-            Add("checkbox", NS.L("Apply to name text"), nil, "targetNameColorEnable", nil, nil, nil, nil, 1, {offX=20})
             Add("color", NS.L("Target color"), nil, "targetColor", nil, nil, nil, nil, 1, {offX=20})
 
             -- Col 2

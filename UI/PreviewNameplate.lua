@@ -223,6 +223,70 @@ local function GetPlayerFactionPair()
     return playerFaction, enemyFaction
 end
 
+local function GetPreviewNameAnchorMode(db)
+    local mode = db and db.nameAnchorMode or "ABOVE_HEALTHBAR"
+    if mode == "ABOVE_HEALTHBAR" or mode == "CENTER_HEALTHBAR" or mode == "BELOW_HEALTHBAR" then
+        return mode
+    end
+    return "ABOVE_HEALTHBAR"
+end
+
+local function GetPreviewNameWrapperPoints(alignH, anchorMode)
+    if anchorMode == "BELOW_HEALTHBAR" then
+        if alignH == "LEFT" then
+            return "TOPLEFT", "BOTTOMLEFT"
+        elseif alignH == "RIGHT" then
+            return "TOPRIGHT", "BOTTOMRIGHT"
+        else
+            return "TOP", "BOTTOM"
+        end
+    elseif anchorMode == "CENTER_HEALTHBAR" then
+        if alignH == "LEFT" then
+            return "LEFT", "LEFT"
+        elseif alignH == "RIGHT" then
+            return "RIGHT", "RIGHT"
+        else
+            return "CENTER", "CENTER"
+        end
+    else
+        if alignH == "LEFT" then
+            return "BOTTOMLEFT", "TOPLEFT"
+        elseif alignH == "RIGHT" then
+            return "BOTTOMRIGHT", "TOPRIGHT"
+        else
+            return "BOTTOM", "TOP"
+        end
+    end
+end
+
+local function GetPreviewNameFontPoint(alignH, anchorMode)
+    if anchorMode == "BELOW_HEALTHBAR" then
+        if alignH == "LEFT" then
+            return "TOPLEFT"
+        elseif alignH == "RIGHT" then
+            return "TOPRIGHT"
+        else
+            return "TOP"
+        end
+    elseif anchorMode == "CENTER_HEALTHBAR" then
+        if alignH == "LEFT" then
+            return "LEFT"
+        elseif alignH == "RIGHT" then
+            return "RIGHT"
+        else
+            return "CENTER"
+        end
+    else
+        if alignH == "LEFT" then
+            return "BOTTOMLEFT"
+        elseif alignH == "RIGHT" then
+            return "BOTTOMRIGHT"
+        else
+            return "BOTTOM"
+        end
+    end
+end
+
 local function GetPreviewStatusAnchorRegion(anchorMode)
     if anchorMode == "Name" then
         return "BOTTOM", (PreviewFrame and (PreviewFrame.NameFS or PreviewFrame.NameAnchor)), "TOP"
@@ -519,12 +583,12 @@ local function ResolveColorByMode(db, unitType, modeKey, customKey, hostileKey, 
     return GetSyntheticReactionColor(unitType)
 end
 
-local function ResolvePreviewTargetColor(db, allowNameColor)
+local function ResolvePreviewTargetColor(db, allowTargetOverride)
     if not db then return nil end
     if PreviewIsTarget ~= true then return nil end
     if db.targetIndicatorEnable == false then return nil end
     if db.targetColorEnable ~= true then return nil end
-    if allowNameColor == false then return nil end
+    if allowTargetOverride == false then return nil end
 
     local c = db.targetColor
     if c then
@@ -720,6 +784,7 @@ end
 
 local function GetGuildNameShift(db, gdb, sample)
     if not db or not db.guildTextEnable then return 0 end
+    if GetPreviewNameAnchorMode(db) ~= "ABOVE_HEALTHBAR" then return 0 end
     if not sample or not sample.isPlayer or not sample.guildName then return 0 end
 
     local text = FormatGuildText(sample.guildName)
@@ -914,6 +979,7 @@ local function ApplyNameStyle(db, gdb, sample, extraShiftY)
     if not PreviewFrame or not PreviewFrame.NameFS then return end
 
     local fs = PreviewFrame.NameFS
+    local anchorMode = GetPreviewNameAnchorMode(db)
     local fontPath = NS.GetFontPath(gdb and gdb.globalFont)
     local targetScale = 1
     if PreviewIsTarget and not db.nameDisableTargetScale then
@@ -939,14 +1005,14 @@ local function ApplyNameStyle(db, gdb, sample, extraShiftY)
 
     local alignH = db.textAlign or "CENTER"
     fs:SetJustifyH(alignH)
-    fs:SetJustifyV("BOTTOM")
+    fs:SetJustifyV((anchorMode == "BELOW_HEALTHBAR") and "TOP" or ((anchorMode == "CENTER_HEALTHBAR") and "MIDDLE" or "BOTTOM"))
     fs:SetWordWrap(db.nameWordWrap ~= false)
     if fs.SetMaxLines then
         fs:SetMaxLines((db.nameWordWrap ~= false) and 0 or 1)
     end
     fs:SetWidth(wrapWidth)
 
-    local r, g, b = ResolvePreviewTargetColor(db, db.targetNameColorEnable == true)
+    local r, g, b = ResolvePreviewTargetColor(db, db.nameTargetColorEnable ~= false)
     if r == nil then
         r, g, b = ResolveColorByMode(
             db,
@@ -962,23 +1028,13 @@ local function ApplyNameStyle(db, gdb, sample, extraShiftY)
     fs:SetTextColor(r, g, b, 1)
     fs:SetText(sample.name or "")
 
+    local wrapperPoint, wrapperRelPoint = GetPreviewNameWrapperPoints(alignH, anchorMode)
     PreviewFrame.NameAnchor:ClearAllPoints()
-    if alignH == "LEFT" then
-        PreviewFrame.NameAnchor:SetPoint("BOTTOMLEFT", PreviewFrame.BarAnchor, "TOPLEFT", db.textX or 0, (db.textY or 0) + (extraShiftY or 0))
-    elseif alignH == "RIGHT" then
-        PreviewFrame.NameAnchor:SetPoint("BOTTOMRIGHT", PreviewFrame.BarAnchor, "TOPRIGHT", db.textX or 0, (db.textY or 0) + (extraShiftY or 0))
-    else
-        PreviewFrame.NameAnchor:SetPoint("BOTTOM", PreviewFrame.BarAnchor, "TOP", db.textX or 0, (db.textY or 0) + (extraShiftY or 0))
-    end
+    PreviewFrame.NameAnchor:SetPoint(wrapperPoint, PreviewFrame.BarAnchor, wrapperRelPoint, db.textX or 0, (db.textY or 0) + (extraShiftY or 0))
 
+    local fsPoint = GetPreviewNameFontPoint(alignH, anchorMode)
     fs:ClearAllPoints()
-    if alignH == "LEFT" then
-        fs:SetPoint("BOTTOMLEFT", PreviewFrame.NameAnchor, "BOTTOMLEFT", 0, 0)
-    elseif alignH == "RIGHT" then
-        fs:SetPoint("BOTTOMRIGHT", PreviewFrame.NameAnchor, "BOTTOMRIGHT", 0, 0)
-    else
-        fs:SetPoint("BOTTOM", PreviewFrame.NameAnchor, "BOTTOM", 0, 0)
-    end
+    fs:SetPoint(fsPoint, PreviewFrame.NameAnchor, fsPoint, 0, 0)
 
     fs:SetShown(db.nameEnable ~= false)
 end
@@ -1021,7 +1077,7 @@ local function ApplyHealthStyle(db, sample)
     PreviewFrame.FillTexture:SetPoint("BOTTOM", PreviewFrame.FillClipFrame, "BOTTOM", 0, 0)
     PreviewFrame.FillTexture:SetWidth(math.max(1, math.floor(fillW * SAMPLE_HEALTH_PCT + 0.5)))
 
-    local r, g, b = ResolvePreviewTargetColor(db, true)
+    local r, g, b = ResolvePreviewTargetColor(db, db.healthTargetColorEnable ~= false)
     if r == nil then
         r, g, b = ResolveColorByMode(
             db,

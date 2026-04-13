@@ -458,7 +458,7 @@ function NS.Widgets.CreateColorPicker(parent, label, dbKey, context)
     return wrapper
 end
 
-function NS.Widgets.CreateDropdown(parent, label, dbKey, options, context, width, onChange, getCurrent)
+function NS.Widgets.CreateDropdown(parent, label, dbKey, options, desc, context, width, onChange, getCurrent)
     local function ApplyValue(val)
         if onChange then
             onChange(val)
@@ -503,6 +503,10 @@ function NS.Widgets.CreateDropdown(parent, label, dbKey, options, context, width
                 end
             end
         end
+    end
+
+    if desc then
+        NS.CreateDesc(wrapper, desc, wrapper.btn)
     end
 
     return wrapper
@@ -612,7 +616,7 @@ function NS.Widgets.CreateCopyProfilesWidget(parent, opt)
     local arrowW = 18
     local dstX = ddW + gap + arrowW + gap
 
-    local srcDD = NS.Widgets.CreateDropdown(frame, NS.L("Source"), srcKey, unitTypeList, context, ddW)
+    local srcDD = NS.Widgets.CreateDropdown(frame, NS.L("Source"), srcKey, unitTypeList, nil, context, ddW)
     PixelSnapSetPoint(srcDD, "TOPLEFT", frame, "TOPLEFT", 0, 0)
 
     local arrow = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -623,7 +627,7 @@ function NS.Widgets.CreateCopyProfilesWidget(parent, opt)
     arrow:SetTextColor(unpack(NS.COLOR_TEXT_OFF))
     arrow:SetText(">>")
 
-    local dstDD = NS.Widgets.CreateDropdown(frame, NS.L("Destination"), dstKey, FilterDestOptions, context, ddW)
+    local dstDD = NS.Widgets.CreateDropdown(frame, NS.L("Destination"), dstKey, FilterDestOptions, nil, context, ddW)
     PixelSnapSetPoint(dstDD, "TOPLEFT", frame, "TOPLEFT", dstX, 0)
 
     -- Sections title
