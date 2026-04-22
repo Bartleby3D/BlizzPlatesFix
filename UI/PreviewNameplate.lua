@@ -618,7 +618,12 @@ end
 ApplyPreviewFont = function(fs, fontPath, fontSize, style)
     if not fs then return end
 
-    local fontStyle = (style == "SHADOW" or style == "NONE") and nil or style
+    local fontStyle
+    if style == "SHADOW" or style == "NONE" then
+        fontStyle = nil
+    else
+        fontStyle = style
+    end
     if not fs:SetFont(fontPath, fontSize, fontStyle) then
         fs:SetFont(STANDARD_TEXT_FONT, fontSize, fontStyle)
     end
@@ -989,7 +994,12 @@ local function ApplyNameStyle(db, gdb, sample, extraShiftY)
     local fontSize = (db.fontScale or 8) * targetScale
     local wrapWidth = (db.nameWrapWidth or 135) * targetScale
     local style = db.fontOutline or "SHADOW"
-    local fontStyle = (style == "SHADOW" or style == "NONE") and nil or style
+    local fontStyle
+    if style == "SHADOW" or style == "NONE" then
+        fontStyle = nil
+    else
+        fontStyle = style
+    end
 
     if not fs:SetFont(fontPath, fontSize, fontStyle) then
         fs:SetFont(STANDARD_TEXT_FONT, fontSize, fontStyle)

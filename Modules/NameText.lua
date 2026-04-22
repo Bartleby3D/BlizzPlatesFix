@@ -307,7 +307,12 @@ local function ApplyStyle(frame, st, unit, db, gdb)
 
     local fontPath = NS.GetFontPath(gdb and gdb.globalFont)
     local style = db.fontOutline or "OUTLINE"
-    local fontStyle = (style == "SHADOW" or style == "NONE") and nil or style
+    local fontStyle
+    if style == "SHADOW" or style == "NONE" then
+        fontStyle = nil
+    else
+        fontStyle = style
+    end
 
     -- ШАГ 1: Установка шрифта (Формирование базовых метрик)
     local fontChanged = (st.lastFontPath ~= fontPath or st.lastFontSize ~= fontSize or st.lastFontStyle ~= fontStyle)

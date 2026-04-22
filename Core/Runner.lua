@@ -36,7 +36,7 @@ function NS.UpdateAllModules(unit, reasonMask)
 
     -- Widgets-only nameplates (интерактивные объекты/прогресс бары и т.п.).
     -- Для них нельзя рисовать наши HP/Level/Name, но нужно оставить Blizzard widgets.
-    if _G.UnitNameplateShowsWidgetsOnly and _G.UnitNameplateShowsWidgetsOnly(unit) then
+    if ((_G.UnitNameplateShowsWidgetsOnly and _G.UnitNameplateShowsWidgetsOnly(unit)) or (_G.UnitIsGameObject and _G.UnitIsGameObject(unit))) then
         -- Снимаем следы наших модулей, но НЕ прячем весь UnitFrame (иначе пропадут widgets).
         if NS.ModuleManager and NS.ModuleManager.ResetFrame then
             NS.ModuleManager.ResetFrame(frame)

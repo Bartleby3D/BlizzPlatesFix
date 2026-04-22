@@ -1,8 +1,8 @@
-## Interface: 120001
+## Interface: 120005
 ## Title: BlizzPlatesFix
 ## Notes: Modular NamePlates
 ## Author: Archer#2848
-## Version: 1.1.3
+## Version: 1.1.4
 ## SavedVariables: BlizzPlatesFixDB
 ## IconTexture: Interface\AddOns\BlizzPlatesFix\Media\BPFIcon.tga
 ## X-License: All Rights Reserved
