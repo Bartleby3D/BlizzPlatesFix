@@ -43,8 +43,43 @@ local function SafeUnitNameString(unit)
     return ""
 end
 
+local function GetUnitFullNameString(unit)
+    if not unit then return nil end
+
+    if GetUnitName then
+        local fullName = GetUnitName(unit, true)
+        if type(fullName) == "string" and fullName ~= "" then
+            return fullName
+        end
+    end
+
+    if UnitFullName then
+        local name, realm = UnitFullName(unit)
+        if type(name) == "string" and name ~= "" then
+            if type(realm) == "string" and realm ~= "" then
+                return name .. "-" .. realm
+            end
+            return name
+        end
+    end
+
+    local fallbackName = SafeUnitNameString(unit)
+    if fallbackName ~= "" then
+        return fallbackName
+    end
+
+    return nil
+end
+
 local function GetTargetIdentity(unit)
-    return UnitGUID(unit) or GetUnitName(unit, true) or unit
+    -- Не вызываем UnitGUID() для целей неймплейтов. В PvP WoW 12.x
+    -- запрещает часть compound unit tokens вроде "nameplate5target".
+    return GetUnitFullNameString(unit) or unit
+end
+
+local function IsPvPInstance()
+    local inInstance, instanceType = IsInInstance()
+    return inInstance and (instanceType == "pvp" or instanceType == "arena")
 end
 
 local function GetTargetDisplayName(unit)
@@ -61,6 +96,21 @@ local function GetTargetDisplayName(unit)
     end
 
     return displayName, rpState, fallbackName
+end
+
+
+local function GetClassColorByClassFile(classFile)
+    if not classFile then return nil end
+
+    if C_ClassColor and C_ClassColor.GetClassColor then
+        local c = C_ClassColor.GetClassColor(classFile)
+        if c then return c.r, c.g, c.b end
+    end
+
+    local c = RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile]
+    if c then return c.r, c.g, c.b end
+
+    return nil
 end
 
 local function GetClassColorRGB(unit)
@@ -148,14 +198,43 @@ local function UpdateTargetText(cb, st, db)
 
     local unit = st.unit
     local unitTarget = unit .. "target"
-    if not UnitExists(unitTarget) then
+    local identity, displayName, rpState, targetUnitForColor, targetClassFile
+
+    local canUseSpellTargetAPI = UnitSpellTargetName and ((not UnitShouldDisplaySpellTargetName) or UnitShouldDisplaySpellTargetName(unit))
+    local spellTargetName = canUseSpellTargetAPI and UnitSpellTargetName(unit) or nil
+    if spellTargetName ~= nil then
+        -- WoW 12.x: UnitSpellTargetName(unit) возвращает имя цели текущего каста,
+        -- а не unit token. Нельзя передавать это значение в UnitName/UnitGUID.
+        displayName = spellTargetName
+        identity = spellTargetName
+        targetUnitForColor = nil
+        targetClassFile = UnitSpellTargetClass and UnitSpellTargetClass(unit) or nil
+    elseif IsPvPInstance() or UnitIsPlayer(unit) then
+        -- В PvP и для игроков не падаем обратно на nameplateNtarget.
+        -- Для игроков target-of-target часто показывает текущий target кастера,
+        -- а не реальную spell-target цель при mouseover/arena macro.
         st.lastTargetIdentity = nil
         st.targetText:Hide()
         return
-    end
+    else
+        -- PvE/legacy fallback только для NPC: приблизительно показываем текущую
+        -- цель кастера через compound unit token, но без UnitGUID().
+        if not UnitExists(unitTarget) then
+            st.lastTargetIdentity = nil
+            st.targetText:Hide()
+            return
+        end
 
-    local identity = GetTargetIdentity(unitTarget)
-    local displayName, rpState, fallbackName = GetTargetDisplayName(unitTarget)
+        identity = GetTargetIdentity(unitTarget)
+        displayName, rpState = GetTargetDisplayName(unitTarget)
+        targetUnitForColor = unitTarget
+
+        if displayName == nil or displayName == "" then
+            st.lastTargetIdentity = nil
+            st.targetText:Hide()
+            return
+        end
+    end
 
     if rpState == "pending" then
         if st.lastTargetIdentity ~= identity then
@@ -165,11 +244,19 @@ local function UpdateTargetText(cb, st, db)
         return
     end
 
-    st.targetText:SetFormattedText(" |cffFF0000=>|r %s", displayName)
+    st.targetText:SetText(" |cffFF0000=>|r " .. displayName)
 
     if db.cbTargetMode == "CLASS" then
-        local cr, cg, cbCol = GetClassColorRGB(unitTarget)
-        st.targetText:SetTextColor(cr, cg, cbCol)
+        local cr, cg, cbCol = GetClassColorByClassFile(targetClassFile)
+        if not cr and targetUnitForColor then
+            cr, cg, cbCol = GetClassColorRGB(targetUnitForColor)
+        end
+        if cr then
+            st.targetText:SetTextColor(cr, cg, cbCol)
+        else
+            local tc = db.cbTargetColor
+            st.targetText:SetTextColor((tc and tc.r) or 0.8, (tc and tc.g) or 0.8, (tc and tc.b) or 0.8)
+        end
     else
         local tc = db.cbTargetColor
         local r = (tc and tc.r) or 0.8
